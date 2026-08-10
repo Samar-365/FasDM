@@ -1,0 +1,629 @@
+# Software Requirements Specification (SRS)
+
+## FasDM Mesh – Internet-Free Messaging Platform
+
+**Version:** 1.0
+**Prepared For:** Hackathon Project
+**Document Type:** Software Requirements Specification (IEEE 29148 Inspired)
+
+---
+
+# 1. Introduction
+
+## 1.1 Purpose
+
+The purpose of this document is to define the software requirements for **FasDM Mesh**, an offline-first messaging platform that enables users to communicate without requiring an internet connection. The application leverages **Local Wi-Fi (LAN)**, **Wi-Fi Direct**, and **Bluetooth** to facilitate peer-to-peer communication in environments where internet access is unavailable or unreliable.
+
+---
+
+## 1.2 Scope
+
+FasDM Mesh allows users to:
+
+* Exchange text messages without internet.
+* Discover nearby devices automatically.
+* Create local chat groups.
+* Share files over peer-to-peer connections.
+* Broadcast emergency messages.
+* Store chats locally.
+* Collaborate using shared tools like whiteboards and checklists.
+* Automatically select the best available communication channel.
+
+The system is intended for:
+
+* Colleges
+* Hackathons
+* Festivals
+* Corporate campuses
+* Disaster communication
+* Remote villages
+* Military training exercises
+
+---
+
+## 1.3 Objectives
+
+* Enable internet-free communication.
+* Reduce dependency on cloud infrastructure.
+* Provide encrypted peer-to-peer messaging.
+* Support offline collaboration.
+* Offer seamless communication across multiple local technologies.
+
+---
+
+# 2. Overall Description
+
+## 2.1 Product Perspective
+
+FasDM Mesh is a decentralized messaging platform.
+
+Unlike WhatsApp or Telegram, messages are exchanged directly between nearby devices without any central server.
+
+```
+ Phone A
+     │
+Bluetooth / Wi-Fi Direct / LAN
+     │
+ Phone B
+```
+
+If mesh networking is enabled:
+
+```
+A ---- B ---- C ---- D
+```
+
+Messages may travel through intermediate devices.
+
+---
+
+## 2.2 Product Functions
+
+The application provides:
+
+* User registration
+* Device discovery
+* One-to-one messaging
+* Group messaging
+* File transfer
+* Voice notes
+* QR pairing
+* Broadcast messaging
+* Local message storage
+* End-to-end encryption
+* Shared collaboration tools
+* Offline notifications
+
+---
+
+## 2.3 User Classes
+
+### Normal User
+
+* Send messages
+* Receive messages
+* Share files
+* Join groups
+* Use collaboration tools
+
+---
+
+### Group Admin
+
+* Create groups
+* Remove members
+* Broadcast announcements
+* Manage group permissions
+
+---
+
+### Emergency Coordinator
+
+* Broadcast alerts
+* Send emergency announcements
+* Monitor nearby connected devices
+
+---
+
+# 3. Functional Requirements
+
+---
+
+## FR-1 User Registration
+
+The system shall allow users to create a local profile.
+
+Inputs
+
+* Username
+* Avatar
+
+Output
+
+* Local user profile
+
+---
+
+## FR-2 Device Discovery
+
+The system shall automatically discover nearby devices using
+
+* Bluetooth
+* Wi-Fi Direct
+* Local Wi-Fi
+
+Nearby users shall appear within a few seconds.
+
+---
+
+## FR-3 QR Pairing
+
+Users shall connect by scanning QR codes.
+
+The QR contains
+
+* Device ID
+* Public Key
+* Username
+
+---
+
+## FR-4 One-to-One Messaging
+
+Users shall send
+
+* Text
+* Emoji
+* Images
+* Documents
+* Voice Notes
+
+---
+
+## FR-5 Group Messaging
+
+Users shall
+
+* Create groups
+* Join groups
+* Leave groups
+* Delete groups (admin only)
+
+---
+
+## FR-6 File Sharing
+
+Supported files
+
+* PDF
+* Images
+* Videos
+* ZIP
+* PPT
+* DOCX
+
+Large files shall automatically use Wi-Fi Direct when available.
+
+---
+
+## FR-7 Voice Messages
+
+Users shall
+
+* Record
+* Send
+* Play
+* Delete
+
+voice notes.
+
+---
+
+## FR-8 Read Receipts
+
+Messages shall support
+
+* Sent
+* Delivered
+* Read
+
+status indicators.
+
+---
+
+## FR-9 Typing Indicator
+
+The system shall display
+
+```
+Rahul is typing...
+```
+
+---
+
+## FR-10 Broadcast Messaging
+
+Users with permission may broadcast
+
+* Emergency alerts
+* Event notifications
+* Meeting announcements
+
+to all nearby connected devices.
+
+---
+
+## FR-11 Shared Whiteboard
+
+Users inside a chat shall collaboratively draw.
+
+Updates shall synchronize in real time.
+
+---
+
+## FR-12 Shared Checklist
+
+Users shall
+
+* Add tasks
+* Mark completed
+* Delete tasks
+
+inside conversations.
+
+---
+
+## FR-13 Shared Notes
+
+Sticky notes shall synchronize among connected users.
+
+---
+
+## FR-14 Local Storage
+
+Chats shall remain available after
+
+* App restart
+* Device reboot
+
+using IndexedDB (PWA) or SQLite (native app).
+
+---
+
+## FR-15 Encryption
+
+Every message shall be encrypted before transmission.
+
+---
+
+## FR-16 Mesh Routing (Future)
+
+When direct communication fails
+
+```
+A → B → C → D
+```
+
+the application shall forward messages through nearby devices.
+
+---
+
+## FR-17 Automatic Network Selection
+
+Priority
+
+```
+LAN
+ ↓
+Wi-Fi Direct
+ ↓
+Bluetooth
+```
+
+The application automatically switches to the fastest available connection.
+
+---
+
+## FR-18 Notifications
+
+Users receive notifications for
+
+* New messages
+* Group invitations
+* Broadcast alerts
+* Collaboration updates
+
+---
+
+# 4. Non-Functional Requirements
+
+## Performance
+
+* Message delivery under 500 ms on LAN.
+* Support at least 100 connected users on a local network.
+* File transfer speed depends on the communication medium.
+* Nearby device discovery within 5 seconds.
+
+---
+
+## Reliability
+
+* No message loss.
+* Automatic reconnection.
+* Local backup of conversations.
+
+---
+
+## Availability
+
+* Works without internet.
+* Available whenever nearby devices are reachable.
+
+---
+
+## Scalability
+
+The architecture shall support
+
+* 500+ users on LAN
+* Unlimited independent local networks
+
+---
+
+## Security
+
+* AES-256 encryption for message content.
+* Secure key exchange (ECDH/RSA).
+* Device authentication.
+* No cloud storage by default.
+* Local encrypted database.
+
+---
+
+## Usability
+
+* Simple onboarding.
+* QR pairing.
+* Responsive UI.
+* Dark mode.
+* Accessibility support.
+
+---
+
+# 5. System Architecture
+
+```
+                  React PWA
+                      │
+        Offline Service Layer
+                      │
+    ┌─────────┬────────────┬───────────┐
+ Bluetooth  Wi-Fi Direct   Local Wi-Fi
+    │            │              │
+    └──────── Peer-to-Peer Network ────────┘
+                      │
+                Local Database
+```
+
+---
+
+# 6. Technology Stack
+
+## Frontend
+
+* React
+* TypeScript
+* Vite
+* Tailwind CSS
+* PWA
+* IndexedDB
+* Service Workers
+
+---
+
+## Networking
+
+* WebSockets
+* TCP
+* UDP
+* mDNS (service discovery)
+* QR Code API
+
+---
+
+## Backend (Local Node)
+
+* Node.js
+* Express.js
+* WebSocket Server
+* Socket.IO (optional)
+
+---
+
+## Storage
+
+* IndexedDB (PWA)
+* SQLite (native app)
+
+---
+
+## Encryption
+
+* Web Crypto API
+* AES-256
+* ECDH key exchange
+
+---
+
+## Development Tools
+
+* Git
+* GitHub
+* Postman
+* VS Code
+* Docker (optional)
+
+---
+
+# 7. Database Design
+
+## Users
+
+| Field     | Type   |
+| --------- | ------ |
+| userId    | UUID   |
+| username  | String |
+| avatar    | String |
+| publicKey | String |
+
+---
+
+## Messages
+
+| Field      | Type     |
+| ---------- | -------- |
+| messageId  | UUID     |
+| senderId   | UUID     |
+| receiverId | UUID     |
+| message    | Text     |
+| timestamp  | DateTime |
+| status     | Enum     |
+
+---
+
+## Groups
+
+| Field     | Type   |
+| --------- | ------ |
+| groupId   | UUID   |
+| groupName | String |
+| adminId   | UUID   |
+
+---
+
+## Group Members
+
+| Field   | Type |
+| ------- | ---- |
+| groupId | UUID |
+| userId  | UUID |
+
+---
+
+## Files
+
+| Field      | Type    |
+| ---------- | ------- |
+| fileId     | UUID    |
+| fileName   | String  |
+| senderId   | UUID    |
+| receiverId | UUID    |
+| path       | String  |
+| size       | Integer |
+
+---
+
+# 8. Use Cases
+
+### UC-1 Send Message
+
+**Actor:** User
+
+**Precondition:** Users are connected.
+
+**Flow:**
+
+1. Open chat.
+2. Type a message.
+3. Press Send.
+4. Message is encrypted.
+5. Best network is selected.
+6. Recipient receives and decrypts the message.
+
+---
+
+### UC-2 Share File
+
+**Actor:** User
+
+**Flow:**
+
+1. Select a file.
+2. System determines the optimal transfer method.
+3. File is transmitted.
+4. Recipient receives and stores it locally.
+
+---
+
+### UC-3 Create Group
+
+**Actor:** User
+
+**Flow:**
+
+1. Tap "New Group."
+2. Select nearby users.
+3. Enter a group name.
+4. Group is created.
+5. Members are notified.
+
+---
+
+### UC-4 Broadcast Alert
+
+**Actor:** Emergency Coordinator
+
+**Flow:**
+
+1. Compose an alert.
+2. Select "Broadcast."
+3. All nearby devices receive the notification.
+
+---
+
+# 9. UI Modules
+
+* Splash Screen
+* Profile Setup
+* Nearby Devices
+* QR Pairing
+* Home (Chat List)
+* One-to-One Chat
+* Group Chat
+* Shared Whiteboard
+* Shared Checklist
+* Sticky Notes
+* File Viewer
+* Settings
+* About
+
+---
+
+# 10. Future Enhancements
+
+* Full mesh networking with multi-hop routing.
+* Offline voice calls.
+* Offline video calls over LAN.
+* Live location sharing.
+* Multi-device synchronization.
+* Desktop and Android clients.
+* End-to-end encrypted backups.
+* AI-assisted local search of conversations (on-device).
+* Offline multiplayer games integrated into chats.
+
+---
+
+# 11. Suggested Hackathon MVP
+
+For a 24–48 hour hackathon, implement the following:
+
+* User profile creation.
+* Nearby user discovery on the same local Wi-Fi.
+* One-to-one messaging using WebSockets.
+* Group chat.
+* File sharing.
+* QR-based pairing.
+* Local chat storage with IndexedDB.
+* Shared whiteboard or checklist.
+
+This MVP demonstrates the core value of internet-free communication while remaining feasible within a hackathon timeframe, and it provides a clear roadmap for future additions such as Bluetooth, Wi-Fi Direct, and mesh routing.
