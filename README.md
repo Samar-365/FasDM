@@ -1,1 +1,2 @@
-# FasDM
+# FasDM: P2P Secure Chat
+
