@@ -167,11 +167,10 @@ export const PeerScanner: React.FC<PeerScannerProps> = ({ onSelectPeerForChat })
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                activeTab === tab
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${activeTab === tab
                   ? 'bg-blue-600 text-white shadow'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}
+                }`}
             >
               {tab === 'All' ? `All (${peers.length})` : tab}
             </button>
@@ -238,9 +237,8 @@ export const PeerScanner: React.FC<PeerScannerProps> = ({ onSelectPeerForChat })
                       </h4>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <span
-                          className={`w-2 h-2 rounded-full ${
-                            peer.status === 'connected' ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'
-                          }`}
+                          className={`w-2 h-2 rounded-full ${peer.status === 'connected' ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'
+                            }`}
                         />
                         <span className="text-[11px] text-slate-400 font-mono">
                           {peer.status === 'connected' ? 'Online' : 'Discovered'}
@@ -251,13 +249,12 @@ export const PeerScanner: React.FC<PeerScannerProps> = ({ onSelectPeerForChat })
 
                   {/* Channel Tag */}
                   <span
-                    className={`badge text-[10px] ${
-                      peer.connectionType === 'LAN'
+                    className={`badge text-[10px] ${peer.connectionType === 'LAN'
                         ? 'badge-emerald'
                         : peer.connectionType === 'Wi-Fi Direct'
-                        ? 'badge-cyan'
-                        : 'badge-purple'
-                    }`}
+                          ? 'badge-cyan'
+                          : 'badge-purple'
+                      }`}
                   >
                     {peer.connectionType === 'LAN' ? (
                       <Wifi size={10} className="inline mr-1" />

@@ -63,28 +63,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
   return (
     <div className="min-h-[calc(100vh-64px)] p-4 sm:p-6 lg:p-8 bg-slate-950">
       <div className="max-w-7xl mx-auto space-y-6">
-        
+
         {/* Navigation Tabs Header */}
         <div className="glass-panel p-2 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
-                activeTab === 'overview'
-                  ? 'bg-blue-600 text-white shadow'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${activeTab === 'overview'
+                ? 'bg-blue-600 text-white shadow'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
             >
               <LayoutDashboard size={14} /> System Overview
             </button>
 
             <button
               onClick={() => setActiveTab('peers')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 relative ${
-                activeTab === 'peers'
-                  ? 'bg-blue-600 text-white shadow'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 relative ${activeTab === 'peers'
+                ? 'bg-blue-600 text-white shadow'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
             >
               <Users size={14} /> Nearby Devices
               {discoveredPeersCount > 0 && (
@@ -96,11 +94,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
 
             <button
               onClick={() => setActiveTab('chat')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
-                activeTab === 'chat'
-                  ? 'bg-blue-600 text-white shadow'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${activeTab === 'chat'
+                ? 'bg-blue-600 text-white shadow'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
             >
               <MessageSquare size={14} /> Direct P2P Chat
               {selectedPeerForChat && (
