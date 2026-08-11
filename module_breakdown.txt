@@ -1,0 +1,189 @@
+================================================================================
+FasDM Mesh – Internet-Free Messaging Platform
+12-MODULE SYSTEM BREAKDOWN & SPECIFICATION
+================================================================================
+
+Document: Module Breakdown Specification (12 Modules)
+Version: 1.0
+Standard Alignment: IEEE 29148 / Offline-First P2P Architecture
+
+================================================================================
+12 CORE SYSTEM & FUNCTIONAL MODULES
+================================================================================
+
+--------------------------------------------------------------------------------
+MODULE 1: User Profile & Cryptographic Identity
+--------------------------------------------------------------------------------
+- Purpose: Manages local identity creation, profile data, and cryptographic key generation.
+- Requirements: FR-1 (User Registration), FR-15 (Encryption)
+- Key Components: src/components/ProfileSetup.tsx, src/services/crypto.ts
+- Specifications:
+  * Username setup and avatar selection/custom upload.
+  * Web Crypto API P-256 ECDH Keypair generation (Public/Private keys).
+  * Key Fingerprint generation via SHA-256 digest (e.g. ABCD-1234-EF56-7890).
+  * Export/Import of public keys in PEM format for peer key exchange.
+
+--------------------------------------------------------------------------------
+MODULE 2: Local Device Discovery & Peer Scanning
+--------------------------------------------------------------------------------
+- Purpose: Discovers active nearby nodes across local transport mediums without internet.
+- Requirements: FR-2 (Device Discovery)
+- Key Components: src/components/PeerScanner.tsx, src/services/network.ts
+- Specifications:
+  * Automatic beacon discovery over Local Wi-Fi (LAN), Wi-Fi Direct, and Bluetooth.
+  * Real-time DISCOVERY_BEACON and PEER_HELLO packet broadcast & reception.
+  * Signal strength (RSSI) measurement and latency calculation (ms).
+  * Dynamic list of discovered and connected peer devices within < 5 seconds.
+
+--------------------------------------------------------------------------------
+MODULE 3: QR Code Pairing & Identity Verification
+--------------------------------------------------------------------------------
+- Purpose: Facilitates secure out-of-band device pairing via optical QR codes.
+- Requirements: FR-3 (QR Pairing)
+- Key Components: src/components/PeerScanner.tsx (QR Modal), src/services/crypto.ts
+- Specifications:
+  * Dynamic QR Code generation embedding Device ID, Username, Public Key, and Fingerprint.
+  * Camera-based QR scanner for instant peer recognition and public key exchange.
+  * Cryptographic fingerprint verification modal.
+
+--------------------------------------------------------------------------------
+MODULE 4: One-to-One Encrypted P2P Messaging
+--------------------------------------------------------------------------------
+- Purpose: Handles direct peer-to-peer message transmission with end-to-end encryption.
+- Requirements: FR-4 (One-to-One Messaging), FR-15 (Encryption)
+- Key Components: src/components/ChatRoom.tsx, src/services/network.ts
+- Specifications:
+  * Direct 1-to-1 text, link, and emoji message exchange.
+  * ECDH shared secret derivation combined with AES-GCM-256 payload encryption.
+  * Random 12-byte Initialization Vector (IV) generation per message packet.
+  * In-memory and IndexedDB message pipeline.
+
+--------------------------------------------------------------------------------
+MODULE 5: Message Status & Real-Time Indicators
+--------------------------------------------------------------------------------
+- Purpose: Provides delivery receipts, read confirmations, and typing state updates.
+- Requirements: FR-8 (Read Receipts), FR-9 (Typing Indicator)
+- Key Components: src/components/ChatRoom.tsx, src/services/network.ts
+- Specifications:
+  * Real-time message status indicators: Sent (single check), Delivered (double check), Read (cyan double check).
+  * Network packet acknowledgments (MSG_ACK, MSG_READ).
+  * Dynamic typing status indicator ("User is typing...").
+
+--------------------------------------------------------------------------------
+MODULE 6: Group Messaging & Administration
+--------------------------------------------------------------------------------
+- Purpose: Enables multi-user chat rooms and group management on local networks.
+- Requirements: FR-5 (Group Messaging)
+- Key Components: src/components/Dashboard.tsx, src/components/ChatRoom.tsx
+- Specifications:
+  * Group creation, naming, and peer invitation.
+  * Group administrator privileges (member removal, group deletion).
+  * Group encrypted packet distribution to all active member nodes.
+
+--------------------------------------------------------------------------------
+MODULE 7: Peer-to-Peer File Sharing Engine
+--------------------------------------------------------------------------------
+- Purpose: Transfers media and documents directly between connected nodes.
+- Requirements: FR-6 (File Sharing)
+- Key Components: src/components/ChatRoom.tsx, src/services/network.ts
+- Specifications:
+  * Support for PDF, Images, Videos, ZIP, PPT, and DOCX files.
+  * High-speed P2P file payload transmission with progress indicators.
+  * Automatic transport escalation to Wi-Fi Direct for large file payloads.
+  * In-app file viewer and download triggers.
+
+--------------------------------------------------------------------------------
+MODULE 8: Voice Notes & Audio Messaging
+--------------------------------------------------------------------------------
+- Purpose: Enables recording, transmitting, and playing voice messages offline.
+- Requirements: FR-7 (Voice Messages)
+- Key Components: src/components/ChatRoom.tsx, src/services/db.ts
+- Specifications:
+  * Microphone capture using MediaRecorder API (audio/webm, audio/ogg).
+  * Inline waveform/timer audio recorder component.
+  * Encrypted audio blob transmission and local audio playback.
+
+--------------------------------------------------------------------------------
+MODULE 9: Emergency Broadcast System
+--------------------------------------------------------------------------------
+- Purpose: Allows emergency coordinators or authorized users to broadcast instant alerts.
+- Requirements: FR-10 (Broadcast Messaging)
+- Key Components: src/components/Dashboard.tsx, src/services/network.ts
+- Specifications:
+  * Priority emergency alert composition and broadcast routing.
+  * High-priority notification push to all nearby reachable nodes simultaneously.
+  * Emergency alert banner UI overlay.
+
+--------------------------------------------------------------------------------
+MODULE 10: Shared Collaboration Tools
+--------------------------------------------------------------------------------
+- Purpose: Provides real-time internet-free collaborative workspace tools within chats.
+- Requirements: FR-11 (Shared Whiteboard), FR-12 (Shared Checklist), FR-13 (Shared Notes)
+- Key Components: src/components/Dashboard.tsx, src/components/ChatRoom.tsx
+- Specifications:
+  * Shared Whiteboard: Synchronized HTML5 canvas with drawing, color picker, and eraser tools.
+  * Shared Checklist: Interactive multi-user task list (add, toggle complete, delete).
+  * Shared Sticky Notes: Synchronized moveable notes board for team brainstorming.
+
+--------------------------------------------------------------------------------
+MODULE 11: Local Storage Engine & Offline Persistence
+--------------------------------------------------------------------------------
+- Purpose: Manages persistent offline storage, caching, and database schemas.
+- Requirements: FR-14 (Local Storage)
+- Key Components: src/services/db.ts (IndexedDB Engine)
+- Specifications:
+  * IndexedDB object stores: profiles, keypairs, messages, peers, channels, files.
+  * Automatic fallback and storage quota estimation API.
+  * Full offline operation with persistent state across app restarts and reboots.
+  * Security clear/reset user data controls.
+
+--------------------------------------------------------------------------------
+MODULE 12: Mesh Routing & Channel Auto-Selection
+--------------------------------------------------------------------------------
+- Purpose: Optimizes transport channel selection and enables multi-hop network routing.
+- Requirements: FR-16 (Mesh Routing), FR-17 (Automatic Network Selection)
+- Key Components: src/services/network.ts
+- Specifications:
+  * Automatic network selection by priority: Local LAN -> Wi-Fi Direct -> Bluetooth.
+  * Dynamic channel switching based on throughput, latency, and payload size.
+  * Multi-hop mesh routing fallback (Node A -> Node B -> Node C -> Node D).
+  * Automatic link recovery and peer reconnection management.
+
+
+================================================================================
+12 UI MODULES MAPPING
+================================================================================
+
+ 1. Splash Screen UI Module          (App launch, onboarding workflow, standard badge)
+ 2. Profile Setup UI Module          (Avatar grid, handle input, key pair generator)
+ 3. Nearby Devices Scanner UI Module (Discovered peers grid, RSSI bars, channel badges)
+ 4. QR Pairing UI Module             (QR generator & live camera scanner modal)
+ 5. Dashboard / Main Hub UI Module   (Overview stats, active channels, peer cards)
+ 6. One-to-One Chat UI Module        (Chat timeline, message input, status indicators)
+ 7. Group Chat UI Module             (Group chat room, member list, admin controls)
+ 8. File Viewer UI Module            (Attachment preview, document launcher, progress)
+ 9. Shared Whiteboard UI Module      (Real-time canvas drawing board & controls)
+10. Shared Checklist UI Module       (Interactive task list & sync status)
+11. Sticky Notes UI Module          (Multi-color collaborative notes board)
+12. Settings & Diagnostics UI Module(Key fingerprint viewer, storage meter, profile reset)
+
+
+================================================================================
+SUMMARY MATRIX: 12 MODULES VS FUNCTIONAL REQUIREMENTS
+================================================================================
+
+Module Name                             | SRS Mapping    | Implementation Status
+--------------------------------------------------------------------------------
+Module 1: User Profile & Identity       | FR-1, FR-15    | Completed (Core Setup)
+Module 2: Device Discovery              | FR-2           | Completed (Peer Scanner)
+Module 3: QR Code Pairing               | FR-3           | Completed (QR Engine)
+Module 4: One-to-One Encrypted Chat     | FR-4, FR-15    | Completed (WebCrypto E2E)
+Module 5: Message Status & Indicators   | FR-8, FR-9     | Completed (Receipts/Typing)
+Module 6: Group Messaging               | FR-5           | Completed (Group Hub)
+Module 7: P2P File Sharing              | FR-6           | Completed (File Engine)
+Module 8: Voice Notes                   | FR-7           | Completed (Audio Recorder)
+Module 9: Emergency Broadcast           | FR-10          | Completed (Broadcast System)
+Module 10: Shared Collaboration Tools   | FR-11,12,13    | Completed (Whiteboard/Checklist/Notes)
+Module 11: Local Storage Engine         | FR-14          | Completed (IndexedDB)
+Module 12: Mesh Routing & Channel Auto  | FR-16, FR-17   | Completed (Multi-transport)
+================================================================================

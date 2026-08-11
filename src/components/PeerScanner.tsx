@@ -1,20 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { PeerDevice, TransportChannel } from '../types';
 import { networkService } from '../services/network';
-import { cryptoService } from '../services/crypto';
 import {
   Wifi,
   Radio,
   Bluetooth,
-  Shield,
   MessageSquare,
   Plus,
   Search,
   Cpu,
-  CheckCircle2,
   RefreshCw,
-  QrCode,
-  Lock,
   SignalHigh
 } from 'lucide-react';
 
@@ -27,9 +22,6 @@ export const PeerScanner: React.FC<PeerScannerProps> = ({ onSelectPeerForChat })
   const [activeTab, setActiveTab] = useState<'All' | TransportChannel>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isScanning, setIsScanning] = useState(true);
-  const [showPairModal, setShowPairModal] = useState(false);
-  const [pairPayloadInput, setPairPayloadInput] = useState('');
-  const [pairError, setPairError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = networkService.subscribePeers((updatedPeers) => {
@@ -54,46 +46,10 @@ export const PeerScanner: React.FC<PeerScannerProps> = ({ onSelectPeerForChat })
     await networkService.createSimulatedPeer(`${randomName} (${channel})`, channel);
   };
 
-  const handleImportQRPayload = async () => {
-    setPairError(null);
-    if (!pairPayloadInput.trim()) {
-      setPairError('Please paste identity payload JSON.');
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(pairPayloadInput.trim());
-      if (parsed.protocol !== 'FasDM_Mesh_v1' || !parsed.userId || !parsed.pubKey) {
-        setPairError('Invalid FasDM Mesh QR identity payload structure.');
-        return;
-      }
-
-      const importedPeer: PeerDevice = {
-        deviceId: parsed.userId,
-        username: parsed.username || 'Paired Peer',
-        avatar: '#0284c7',
-        publicKey: parsed.pubKey,
-        fingerprint: parsed.fingerprint || 'QR-PAIRED-KEY',
-        connectionType: 'LAN',
-        lastSeen: Date.now(),
-        status: 'connected',
-        rssi: -50,
-        latencyMs: 10,
-      };
-
-      await networkService.createSimulatedPeer(importedPeer.username, 'LAN');
-      setShowPairModal(false);
-      setPairPayloadInput('');
-    } catch (e) {
-      setPairError('Failed to parse identity JSON snippet.');
-    }
-  };
-
   const filteredPeers = peers.filter((p) => {
     const matchesTab = activeTab === 'All' || p.connectionType === activeTab;
-    const matchesQuery =
-      p.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.fingerprint.toLowerCase().includes(searchQuery.toLowerCase());
+    const query = searchQuery.trim().toLowerCase();
+    const matchesQuery = query === '' || p.username.toLowerCase().includes(query);
     return matchesTab && matchesQuery;
   });
 
@@ -122,7 +78,7 @@ export const PeerScanner: React.FC<PeerScannerProps> = ({ onSelectPeerForChat })
                 <span className="badge badge-cyan">{peers.length} Peers Discovered</span>
               </div>
               <p className="text-xs text-slate-300 flex items-center gap-1.5">
-                <Wifi size={14} className="text-emerald-400" /> Scanning local LAN, Wi-Fi Direct & Bluetooth channels (FR-2, FR-17)
+                <Wifi size={14} className="text-emerald-400" /> Scanning local LAN, Wi-Fi Direct & Bluetooth channels
               </p>
             </div>
           </div>
@@ -136,15 +92,16 @@ export const PeerScanner: React.FC<PeerScannerProps> = ({ onSelectPeerForChat })
             </button>
 
             <button
-              onClick={() => setShowPairModal(true)}
-              className="btn btn-primary text-xs py-2 px-3 flex items-center gap-1.5"
+              onClick={() => networkService.clearAllPeers()}
+              className="btn btn-secondary text-xs py-2 px-3 flex items-center gap-1.5 text-rose-400 hover:text-rose-300"
+              title="Clear old test peers"
             >
-              <QrCode size={14} /> Import Peer Identity
+              Clear Peers Grid
             </button>
           </div>
         </div>
 
-        {/* Connection Channel Priority Banner (FR-17) */}
+        {/* Connection Channel Priority Banner */}
         <div className="mt-6 pt-4 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
           <div className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-700/60 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -226,7 +183,7 @@ export const PeerScanner: React.FC<PeerScannerProps> = ({ onSelectPeerForChat })
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Search peer or fingerprint..."
+            placeholder="Search peer handle..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
@@ -313,23 +270,14 @@ export const PeerScanner: React.FC<PeerScannerProps> = ({ onSelectPeerForChat })
                   </span>
                 </div>
 
-                {/* Technical Fingerprint & RSSI stats */}
-                <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 font-mono text-[11px] space-y-1.5">
-                  <div className="flex justify-between text-slate-400">
-                    <span className="flex items-center gap-1">
-                      <Lock size={10} className="text-emerald-400" /> Identity
-                    </span>
-                    <span className="text-blue-300 font-bold">{peer.fingerprint.substring(0, 9)}...</span>
-                  </div>
-
-                  <div className="flex justify-between text-slate-400">
-                    <span className="flex items-center gap-1">
-                      <SignalHigh size={10} className="text-slate-400" /> Signal & Latency
-                    </span>
-                    <span className="text-slate-300">
-                      {peer.rssi} dBm ({peer.latencyMs || 10} ms)
-                    </span>
-                  </div>
+                {/* Signal & Latency Stats */}
+                <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 font-mono text-[11px] flex justify-between text-slate-400">
+                  <span className="flex items-center gap-1">
+                    <SignalHigh size={10} className="text-slate-400" /> Signal & Latency
+                  </span>
+                  <span className="text-slate-300">
+                    {peer.rssi} dBm ({peer.latencyMs || 10} ms)
+                  </span>
                 </div>
               </div>
 
@@ -338,52 +286,14 @@ export const PeerScanner: React.FC<PeerScannerProps> = ({ onSelectPeerForChat })
                   onClick={() => onSelectPeerForChat(peer)}
                   className="btn btn-primary w-full text-xs py-2 flex items-center justify-center gap-1.5"
                 >
-                  <MessageSquare size={14} /> Start Encrypted Chat
+                  <MessageSquare size={14} /> Start P2P Chat
                 </button>
               </div>
             </div>
           ))}
         </div>
       )}
-
-      {/* Manual Pair / Import QR Modal */}
-      {showPairModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 fade-in-up">
-          <div className="glass-panel max-w-md w-full p-6 space-y-4">
-            <div className="flex justify-between items-center pb-2 border-b border-slate-700">
-              <h3 className="font-bold text-white text-sm flex items-center gap-2">
-                <QrCode size={16} className="text-blue-400" /> Manual Identity Pairing (FR-3)
-              </h3>
-              <button onClick={() => setShowPairModal(false)} className="text-slate-400 hover:text-white">
-                ✕
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-300">
-              Paste a peer's identity JSON string exported from their QR Code modal to pair directly:
-            </p>
-
-            <textarea
-              rows={4}
-              placeholder='{"protocol":"FasDM_Mesh_v1","type":"IDENTITY","userId":"...","pubKey":"..."}'
-              value={pairPayloadInput}
-              onChange={(e) => setPairPayloadInput(e.target.value)}
-              className="w-full p-3 rounded-lg bg-slate-900 border border-slate-700 text-xs font-mono text-cyan-300 focus:outline-none focus:border-blue-500"
-            />
-
-            {pairError && <div className="text-xs text-rose-400 font-mono">{pairError}</div>}
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button onClick={() => setShowPairModal(false)} className="btn btn-secondary text-xs py-2 px-3">
-                Cancel
-              </button>
-              <button onClick={handleImportQRPayload} className="btn btn-primary text-xs py-2 px-4">
-                Pair Node Identity
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
+

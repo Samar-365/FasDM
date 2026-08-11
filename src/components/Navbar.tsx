@@ -1,24 +1,16 @@
 import React, { useState } from 'react';
 import { UserProfile } from '../types';
-import { Radio, Wifi, Shield, Key, LogOut, Copy, Check } from 'lucide-react';
+import { Radio, Wifi, Shield, User, LogOut } from 'lucide-react';
 
 interface NavbarProps {
   profile: UserProfile | null;
   onEditProfile?: () => void;
+  onNewTabNode?: () => void;
   onResetProfile?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ profile, onEditProfile, onResetProfile }) => {
-  const [copied, setCopied] = useState(false);
+export const Navbar: React.FC<NavbarProps> = ({ profile, onEditProfile, onNewTabNode, onResetProfile }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-
-  const copyFingerprint = () => {
-    if (profile?.keyFingerprint) {
-      navigator.clipboard.writeText(profile.keyFingerprint);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
 
   return (
     <header className="sticky top-0 z-50 w-full bg-slate-900 border-b border-slate-800 px-4 lg:px-8 py-3">
@@ -70,15 +62,15 @@ export const Navbar: React.FC<NavbarProps> = ({ profile, onEditProfile, onResetP
                 <span className="text-xs font-semibold text-white leading-none">
                   {profile.username}
                 </span>
-                <span className="text-[10px] font-mono text-slate-400 mt-0.5 leading-none">
-                  {profile.keyFingerprint.substring(0, 9)}...
+                <span className="text-[10px] text-emerald-400 mt-0.5 leading-none">
+                  Online
                 </span>
               </div>
             </button>
 
             {/* Profile Dropdown Menu */}
             {showProfileMenu && (
-              <div className="absolute right-0 mt-2 w-64 glass-panel p-3.5 shadow-xl z-50 fade-in-up">
+              <div className="absolute right-0 mt-2 w-60 glass-panel p-3.5 shadow-xl z-50 fade-in-up">
                 <div className="flex items-center gap-2.5 pb-2.5 border-b border-slate-700 mb-2.5">
                   <div
                     className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-xs shrink-0"
@@ -93,21 +85,8 @@ export const Navbar: React.FC<NavbarProps> = ({ profile, onEditProfile, onResetP
                   <div className="min-w-0 flex-1">
                     <h4 className="text-xs font-bold text-white truncate">{profile.username}</h4>
                     <span className="text-[10px] text-emerald-400 flex items-center gap-1">
-                      <Shield size={10} /> Key Verified
+                      <Shield size={10} /> Local P2P Node
                     </span>
-                  </div>
-                </div>
-
-                <div className="p-2 rounded bg-slate-900 border border-slate-800 mb-2.5">
-                  <div className="flex justify-between text-[10px] text-slate-400 mb-1">
-                    <span>Key Fingerprint</span>
-                    <button onClick={copyFingerprint} className="text-blue-400 hover:underline flex items-center gap-0.5">
-                      {copied ? <Check size={10} /> : <Copy size={10} />}
-                      {copied ? 'Copied' : 'Copy'}
-                    </button>
-                  </div>
-                  <div className="font-mono text-[11px] text-blue-300 truncate">
-                    {profile.keyFingerprint}
                   </div>
                 </div>
 
@@ -120,7 +99,19 @@ export const Navbar: React.FC<NavbarProps> = ({ profile, onEditProfile, onResetP
                       }}
                       className="w-full text-left px-2.5 py-1.5 rounded text-xs font-medium text-slate-200 hover:bg-slate-800 transition flex items-center gap-2"
                     >
-                      <Key size={12} className="text-blue-400" /> Edit Handle & Avatar
+                      <User size={12} className="text-blue-400" /> Edit Profile & Avatar
+                    </button>
+                  )}
+
+                  {onNewTabNode && (
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        onNewTabNode();
+                      }}
+                      className="w-full text-left px-2.5 py-1.5 rounded text-xs font-medium text-cyan-300 hover:bg-slate-800 transition flex items-center gap-2"
+                    >
+                      <Radio size={12} className="text-cyan-400" /> Switch / New Tab Node
                     </button>
                   )}
 
@@ -132,7 +123,7 @@ export const Navbar: React.FC<NavbarProps> = ({ profile, onEditProfile, onResetP
                       }}
                       className="w-full text-left px-2.5 py-1.5 rounded text-xs font-medium text-rose-400 hover:bg-rose-950 transition flex items-center gap-2"
                     >
-                      <LogOut size={12} /> Clear Local Profile Data
+                      <LogOut size={12} /> Clear Local Data
                     </button>
                   )}
                 </div>
@@ -144,3 +135,4 @@ export const Navbar: React.FC<NavbarProps> = ({ profile, onEditProfile, onResetP
     </header>
   );
 };
+

@@ -4,17 +4,15 @@ import { networkService } from '../services/network';
 import { dbEngine } from '../services/db';
 import {
   Send,
-  Lock,
   Wifi,
   Radio,
   Bluetooth,
-  Shield,
   Check,
   CheckCheck,
   Smile,
   Trash2,
   ChevronLeft,
-  Info
+  MessageSquare
 } from 'lucide-react';
 
 interface ChatRoomProps {
@@ -29,7 +27,6 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
   const [activeChannel, setActiveChannel] = useState<TransportChannel>(peer.connectionType);
   const [isPeerTyping, setIsPeerTyping] = useState(false);
   const [showQuickEmojis, setShowQuickEmojis] = useState(false);
-  const [showIdentityDetails, setShowIdentityDetails] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimerRef = useRef<number | null>(null);
@@ -103,7 +100,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputText(e.target.value);
 
-    // Trigger typing notification (FR-9)
+    // Trigger typing notification
     networkService.sendTypingStatus(peer.deviceId, true);
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
     typingTimerRef.current = window.setTimeout(() => {
@@ -178,21 +175,18 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-white truncate">{peer.username}</h3>
-              <span className="badge badge-emerald text-[10px]">
-                <Shield size={10} className="inline mr-1" /> Verified
-              </span>
+              <span className="badge badge-emerald text-[10px]">Active</span>
             </div>
 
-            <p className="text-[11px] text-slate-400 flex items-center gap-1 font-mono truncate">
-              <Lock size={10} className="text-emerald-400" />
-              <span>{peer.fingerprint}</span>
+            <p className="text-[11px] text-slate-400 font-mono truncate">
+              Channel: {activeChannel}
             </p>
           </div>
         </div>
 
         {/* Right Header Controls: Transport Channel Switcher & Actions */}
         <div className="flex items-center gap-2">
-          {/* Transport Selector (FR-17) */}
+          {/* Transport Selector */}
           <div className="hidden sm:flex items-center bg-slate-950 p-1 rounded-lg border border-slate-800 text-[11px]">
             {(['LAN', 'Wi-Fi Direct', 'Bluetooth'] as const).map((ch) => (
               <button
@@ -211,14 +205,6 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
           </div>
 
           <button
-            onClick={() => setShowIdentityDetails(!showIdentityDetails)}
-            className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition"
-            title="Peer Key Info"
-          >
-            <Info size={16} />
-          </button>
-
-          <button
             onClick={handleClearHistory}
             className="p-2 rounded-lg bg-slate-800 text-rose-400 hover:bg-rose-950 transition"
             title="Clear Chat History"
@@ -228,33 +214,22 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
         </div>
       </div>
 
-      {/* Identity Info Panel Drawer */}
-      {showIdentityDetails && (
-        <div className="p-3 bg-slate-900 border-b border-slate-800 text-xs font-mono text-slate-300 flex items-center justify-between fade-in-up shrink-0">
-          <div className="flex items-center gap-2">
-            <Shield size={14} className="text-emerald-400" />
-            <span>ECDH P-256 Public Key PEM: <span className="text-blue-300 font-bold">{peer.fingerprint}</span></span>
-          </div>
-          <span className="text-emerald-400 text-[11px]">AES-256-GCM Encrypted</span>
-        </div>
-      )}
-
       {/* Message Timeline */}
       <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-950/60">
         <div className="text-center py-2">
           <span className="text-[10px] uppercase font-mono tracking-widest text-slate-500 bg-slate-900/80 px-3 py-1 rounded-full border border-slate-800">
-            End-to-End Encrypted Direct Channel ({activeChannel})
+            Direct Peer-to-Peer Channel ({activeChannel})
           </span>
         </div>
 
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-2">
             <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-blue-400">
-              <Lock size={22} />
+              <MessageSquare size={22} />
             </div>
-            <h4 className="text-sm font-bold text-white">Start Direct P2P Conversation</h4>
+            <h4 className="text-sm font-bold text-white">Start P2P Conversation</h4>
             <p className="text-xs text-slate-400 max-w-xs">
-              Messages are encrypted using Web Crypto ECDH keys before transmission over local {activeChannel}.
+              Direct offline peer communication over local {activeChannel}.
             </p>
           </div>
         ) : (
@@ -280,18 +255,12 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
                       isMe ? 'text-blue-200' : 'text-slate-400'
                     }`}
                   >
-                    {msg.isEncrypted && (
-                      <span title="ECDH AES-GCM Encrypted" className="flex items-center gap-0.5">
-                        <Lock size={10} className={isMe ? 'text-blue-200' : 'text-emerald-400'} />
-                      </span>
-                    )}
-
                     <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
 
                     {/* Transport Channel Badge */}
                     <span className="opacity-70 text-[9px]">({msg.channel})</span>
 
-                    {/* Status Ticks (FR-8) */}
+                    {/* Status Ticks */}
                     {isMe && (
                       <span className="ml-0.5">
                         {msg.status === 'sent' && <Check size={12} className="text-blue-300" title="Sent" />}
@@ -306,7 +275,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
           })
         )}
 
-        {/* Real-time Typing Indicator (FR-9) */}
+        {/* Real-time Typing Indicator */}
         {isPeerTyping && (
           <div className="flex items-center gap-2 text-xs font-mono text-cyan-400 fade-in-up">
             <div className="flex space-x-1">
@@ -325,7 +294,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
       {showQuickEmojis && (
         <div className="px-4 py-2 bg-slate-900 border-t border-slate-800 flex items-center gap-3 fade-in-up shrink-0">
           <span className="text-[11px] font-mono text-slate-400">Quick Emoji:</span>
-          {['👍', '🚀', '🔒', '⚡', '❤️', '😊', '🔥', '🎉'].map((emoji) => (
+          {['👍', '🚀', '⚡', '❤️', '😊', '🔥', '🎉'].map((emoji) => (
             <button
               key={emoji}
               onClick={() => addEmoji(emoji)}
@@ -356,7 +325,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
           placeholder={`Type message to ${peer.username} (P2P ${activeChannel})...`}
           value={inputText}
           onChange={handleInputChange}
-          className="flex-1 py-2 px-3.5 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+          className="flex-1 py-2.5 px-4 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 shadow-inner"
         />
 
         <button
@@ -370,3 +339,4 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
     </div>
   );
 };
+

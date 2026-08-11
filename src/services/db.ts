@@ -1,4 +1,4 @@
-import { UserProfile, CryptographicKeyPair, StorageQuotaInfo } from '../types';
+import { UserProfile } from '../types';
 
 const DB_NAME = 'FasDMMeshDB';
 const DB_VERSION = 1;
@@ -22,11 +22,6 @@ export class LocalStorageEngine {
         // Profile Store
         if (!db.objectStoreNames.contains('profile')) {
           db.createObjectStore('profile', { keyPath: 'userId' });
-        }
-
-        // Keys Store
-        if (!db.objectStoreNames.contains('keys')) {
-          db.createObjectStore('keys', { keyPath: 'keyFingerprint' });
         }
 
         // Peers Store
@@ -73,29 +68,6 @@ export class LocalStorageEngine {
         const results = request.result as UserProfile[];
         resolve(results.length > 0 ? results[0] : null);
       };
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  // --- Cryptographic Key Store Operations ---
-  async saveKeyPair(keyPair: CryptographicKeyPair): Promise<void> {
-    const db = await this.initDB();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction('keys', 'readwrite');
-      const store = tx.objectStore('keys');
-      const request = store.put(keyPair);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  async getKeyPair(fingerprint: string): Promise<CryptographicKeyPair | null> {
-    const db = await this.initDB();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction('keys', 'readonly');
-      const store = tx.objectStore('keys');
-      const request = store.get(fingerprint);
-      request.onsuccess = () => resolve(request.result || null);
       request.onerror = () => reject(request.error);
     });
   }
@@ -205,35 +177,6 @@ export class LocalStorageEngine {
     });
   }
 
-
-  // --- Storage Quota Diagnostics ---
-  async getStorageQuota(): Promise<StorageQuotaInfo> {
-    if (navigator.storage && navigator.storage.estimate) {
-      try {
-        const estimate = await navigator.storage.estimate();
-        const usageBytes = estimate.usage || 0;
-        const quotaBytes = estimate.quota || 1;
-        const percentageUsed = Math.min(100, Math.round((usageBytes / quotaBytes) * 100));
-
-        return {
-          usageBytes,
-          quotaBytes,
-          percentageUsed,
-          isAvailable: true,
-        };
-      } catch (err) {
-        console.warn('Storage estimate failed:', err);
-      }
-    }
-
-    return {
-      usageBytes: 0,
-      quotaBytes: 0,
-      percentageUsed: 0,
-      isAvailable: false,
-    };
-  }
-
   // --- Reset Database ---
   async clearAllData(): Promise<void> {
     const db = await this.initDB();
@@ -248,3 +191,4 @@ export class LocalStorageEngine {
 }
 
 export const dbEngine = new LocalStorageEngine();
+

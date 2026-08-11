@@ -1,23 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile, PeerDevice, StorageQuotaInfo, DashboardTab } from '../types';
+import { UserProfile, PeerDevice, DashboardTab } from '../types';
 import { cryptoService } from '../services/crypto';
-import { dbEngine } from '../services/db';
 import { networkService } from '../services/network';
 import { PeerScanner } from './PeerScanner';
 import { ChatRoom } from './ChatRoom';
 import {
   Shield,
-  Wifi,
   QrCode,
-  Database,
   Radio,
-  Cpu,
-  CheckCircle2,
-  Lock,
   Share2,
-  HardDrive,
-  Copy,
-  Check,
   Users,
   MessageSquare,
   LayoutDashboard,
@@ -36,9 +27,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
 
   const [showQRModal, setShowQRModal] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
-  const [storageInfo, setStorageInfo] = useState<StorageQuotaInfo | null>(null);
-  const [testLog, setTestLog] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   // Initialize P2P Network Service & Peer Counter
   useEffect(() => {
@@ -58,9 +46,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
     try {
       const payload = cryptoService.formatQRPayload(
         profile.userId,
-        profile.username,
-        profile.publicKeyPEM,
-        profile.keyFingerprint
+        profile.username
       );
       const url = await cryptoService.generateQRCodeDataURL(payload);
       setQrCodeUrl(url);
@@ -68,27 +54,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
     } catch (err) {
       console.error('Failed to generate QR Code:', err);
     }
-  };
-
-  const runStorageBenchmark = async () => {
-    try {
-      setTestLog('Testing IndexedDB read/write...');
-      const startTime = performance.now();
-      const quota = await dbEngine.getStorageQuota();
-      const endTime = performance.now();
-
-      setStorageInfo(quota);
-      setTestLog(`Storage Test PASSED: Response time ${(endTime - startTime).toFixed(2)}ms.`);
-    } catch (err) {
-      console.error(err);
-      setTestLog('Storage test failed.');
-    }
-  };
-
-  const copyFingerprint = () => {
-    navigator.clipboard.writeText(profile.keyFingerprint);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleSelectPeerForChat = (peer: PeerDevice) => {
@@ -138,7 +103,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
-              <MessageSquare size={14} /> Encrypted Direct Chat
+              <MessageSquare size={14} /> Direct P2P Chat
               {selectedPeerForChat && (
                 <span className="text-[10px] text-blue-300 truncate max-w-[90px]">
                   ({selectedPeerForChat.username.split(' ')[0]})
@@ -183,7 +148,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
                       <span className="badge badge-emerald">Node Active</span>
                     </div>
                     <p className="text-xs text-slate-300 flex items-center gap-1.5">
-                      <Shield size={14} className="text-emerald-400" /> Web Crypto ECDH P-256 Identity Verified in IndexedDB
+                      <Shield size={14} className="text-emerald-400" /> Offline Peer-to-Peer Mesh Node Ready
                     </p>
                   </div>
                 </div>
@@ -199,94 +164,43 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
               </div>
             </div>
 
-            {/* Diagnostic Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Card 1: Key */}
-              <div className="glass-panel p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Public Key</span>
-                  <Lock size={16} className="text-blue-400" />
-                </div>
-                <div>
-                  <div className="text-xs text-slate-400 mb-1">Fingerprint (SHA-256)</div>
-                  <div className="p-2 rounded bg-slate-900 border border-slate-700 font-mono text-xs text-blue-300 flex items-center justify-between">
-                    <span className="truncate">{profile.keyFingerprint}</span>
-                    <button onClick={copyFingerprint} className="text-slate-400 hover:text-blue-400 ml-1">
-                      {copied ? <Check size={12} /> : <Copy size={12} />}
-                    </button>
-                  </div>
-                </div>
-                <div className="text-[11px] text-slate-400 flex items-center gap-1">
-                  <CheckCircle2 size={12} className="text-emerald-400" /> ECDH P-256 Active
-                </div>
-              </div>
-
-              {/* Card 2: Storage */}
-              <div className="glass-panel p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">IndexedDB</span>
-                  <Database size={16} className="text-purple-400" />
-                </div>
-                <div>
-                  <div className="text-xs text-slate-400 mb-1">Local Encrypted Stores</div>
-                  <div className="text-sm font-bold text-white font-mono">
-                    Profile, Keys, Peers, Messages
-                  </div>
-                </div>
-                <button
-                  onClick={runStorageBenchmark}
-                  className="text-[11px] text-blue-400 hover:underline flex items-center gap-1 font-medium"
-                >
-                  <HardDrive size={12} /> Storage Benchmark
-                </button>
-              </div>
-
-              {/* Card 3: Discovery Status */}
-              <div className="glass-panel p-4 space-y-2">
+            {/* System Status Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Card 1: Discovery Status */}
+              <div className="glass-panel p-5 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Discovered Peers</span>
-                  <Users size={16} className="text-cyan-400" />
+                  <Users size={18} className="text-cyan-400" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-white">{discoveredPeersCount}</div>
-                  <p className="text-[11px] text-slate-400">Available for 1-to-1 P2P chat</p>
+                  <div className="text-3xl font-bold text-white">{discoveredPeersCount}</div>
+                  <p className="text-xs text-slate-400 mt-1">Active nodes ready for direct local messaging</p>
                 </div>
                 <button
                   onClick={() => setActiveTab('peers')}
-                  className="text-[11px] text-cyan-400 hover:underline flex items-center gap-1 font-medium"
+                  className="text-xs text-cyan-400 hover:underline flex items-center gap-1 font-medium pt-1"
                 >
-                  View Peer Scanner <ArrowRight size={12} />
+                  View Peer Scanner <ArrowRight size={14} />
                 </button>
               </div>
 
-              {/* Card 4: Module Status */}
-              <div className="glass-panel p-4 space-y-2">
+              {/* Card 2: Active Transport */}
+              <div className="glass-panel p-5 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Active Module</span>
-                  <Radio size={16} className="text-emerald-400" />
+                  <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Active Channel</span>
+                  <Radio size={18} className="text-emerald-400" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-white mb-0.5">Module 2: Device Discovery</h4>
-                  <p className="text-[11px] text-slate-400 leading-tight">
-                    LAN/Wi-Fi Direct P2P transport & 1-to-1 encrypted chat.
+                  <h4 className="text-sm font-bold text-white mb-1">Local Mesh Transport</h4>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Auto-switching transport: Local LAN Wi-Fi, Wi-Fi Direct, and Bluetooth LE.
                   </p>
                 </div>
-                <span className="badge badge-emerald text-[10px]">Module 2 Implemented</span>
+                <span className="badge badge-emerald text-xs">High Speed P2P Ready</span>
               </div>
             </div>
 
-            {/* Diagnostic Log */}
-            {testLog && (
-              <div className="p-3 rounded-lg bg-slate-900 border border-slate-700 text-xs font-mono text-blue-300 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Cpu size={14} className="text-blue-400" />
-                  <span>{testLog}</span>
-                </div>
-                <button onClick={() => setTestLog(null)} className="text-slate-500 hover:text-white">✕</button>
-              </div>
-            )}
-
-            {/* Feature Roadmap & Identity Card */}
+            {/* Feature Architecture Roadmap & Node Identity */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 glass-panel p-5 space-y-3">
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
@@ -300,8 +214,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
                         M1
                       </div>
                       <div>
-                        <h4 className="text-xs font-semibold text-white">Module 1: Identity & Local Storage</h4>
-                        <p className="text-[11px] text-slate-400">IndexedDB store, Web Crypto P-256 keypair, Profile Setup, QR Identity Payload</p>
+                        <h4 className="text-xs font-semibold text-white">Module 1: User Profile & Identity</h4>
+                        <p className="text-[11px] text-slate-400">Local profile management, IndexedDB storage, and QR Code generation</p>
                       </div>
                     </div>
                     <span className="badge badge-emerald">Complete</span>
@@ -314,7 +228,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
                       </div>
                       <div>
                         <h4 className="text-xs font-semibold text-white">Module 2: Device Discovery & P2P Messaging</h4>
-                        <p className="text-[11px] text-slate-400">Local Wi-Fi P2P Transport, Peer Scanner, 1-to-1 Encrypted Chat, Read Receipts, Typing Indicator</p>
+                        <p className="text-[11px] text-slate-400">Local Wi-Fi P2P Transport, Peer Scanner, 1-to-1 Messaging, Read Receipts, Typing Indicator</p>
                       </div>
                     </div>
                     <span className="badge badge-emerald">Completed & Active</span>
@@ -342,9 +256,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
                     Node Identity Card
                   </h3>
 
-                  <div className="text-center py-3">
+                  <div className="text-center py-4">
                     <div
-                      className="w-16 h-16 mx-auto rounded-xl flex items-center justify-center text-white font-bold text-2xl mb-2 shadow-lg"
+                      className="w-16 h-16 mx-auto rounded-xl flex items-center justify-center text-white font-bold text-2xl mb-3 shadow-lg"
                       style={{
                         background: profile.avatar.startsWith('http') || profile.avatar.startsWith('data:') ? undefined : profile.avatar,
                       }}
@@ -356,7 +270,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
                       )}
                     </div>
                     <h4 className="text-lg font-bold text-white">{profile.username}</h4>
-                    <p className="text-xs font-mono text-blue-400 mt-0.5">{profile.keyFingerprint}</p>
+                    <p className="text-xs text-slate-400 font-mono mt-0.5">{profile.userId}</p>
                   </div>
                 </div>
 
@@ -373,7 +287,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
           <PeerScanner onSelectPeerForChat={handleSelectPeerForChat} />
         )}
 
-        {/* TAB 3: DIRECT ENCRYPTED CHAT */}
+        {/* TAB 3: DIRECT CHAT */}
         {activeTab === 'chat' && (
           selectedPeerForChat ? (
             <ChatRoom
@@ -388,7 +302,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
               </div>
               <h3 className="text-base font-bold text-white">Select a Nearby Peer to Start Chatting</h3>
               <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                Go to the Discovered Peers tab and select an online node to begin 1-to-1 Web Crypto encrypted messaging.
+                Go to the Discovered Peers tab and select an online node to begin 1-to-1 direct messaging.
               </p>
               <div className="pt-2">
                 <button
@@ -420,8 +334,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
             )}
 
             <div className="text-left space-y-1 text-xs p-2.5 rounded bg-slate-900 border border-slate-800 font-mono">
-              <div className="text-slate-400">Node: <span className="text-white font-bold">{profile.username}</span></div>
-              <div className="text-slate-400">Fingerprint: <span className="text-blue-300">{profile.keyFingerprint}</span></div>
+              <div className="text-slate-400">Node Handle: <span className="text-white font-bold">{profile.username}</span></div>
             </div>
 
             <button onClick={() => setShowQRModal(false)} className="btn btn-secondary w-full py-2 text-xs">
@@ -433,3 +346,4 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
     </div>
   );
 };
+

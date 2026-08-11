@@ -7,7 +7,6 @@ import {
   MessageStatus,
 } from '../types';
 import { dbEngine } from './db';
-import { cryptoService } from './crypto';
 
 const CHANNEL_NAME = 'FasDM_Mesh_P2P_Transport';
 
@@ -72,6 +71,18 @@ export class P2PNetworkService {
   }
 
   /**
+   * Clears saved peer list and IndexedDB peers store
+   */
+  async clearAllPeers() {
+    this.discoveredPeers.clear();
+    const db = await dbEngine.clearAllData();
+    if (this.currentUser) {
+      await dbEngine.saveProfile(this.currentUser);
+    }
+    this.notifyPeerListeners();
+  }
+
+  /**
    * Updates preferred active channel priority (LAN -> Wi-Fi Direct -> Bluetooth)
    */
   setTransportChannel(channel: TransportChannel) {
@@ -125,10 +136,33 @@ export class P2PNetworkService {
         userId: this.currentUser.userId,
         username: this.currentUser.username,
         avatar: this.currentUser.avatar,
-        publicKeyPEM: this.currentUser.publicKeyPEM,
-        keyFingerprint: this.currentUser.keyFingerprint,
         connectionType: this.activeChannel,
       },
+      payload: {
+        lastSeen: Date.now(),
+      },
+      timestamp: Date.now(),
+    };
+
+    this.broadcastChannel.postMessage(packet);
+  }
+
+  /**
+   * Sends PEER_HELLO greeting response directly to discovered node
+   */
+  sendPeerHello(recipientUserId: string) {
+    if (!this.currentUser || !this.broadcastChannel) return;
+
+    const packet: NetworkPacket = {
+      id: crypto.randomUUID(),
+      type: 'PEER_HELLO',
+      sender: {
+        userId: this.currentUser.userId,
+        username: this.currentUser.username,
+        avatar: this.currentUser.avatar,
+        connectionType: this.activeChannel,
+      },
+      recipientId: recipientUserId,
       payload: {
         lastSeen: Date.now(),
       },
@@ -150,6 +184,11 @@ export class P2PNetworkService {
 
     switch (packet.type) {
       case 'DISCOVERY_BEACON':
+        await this.handlePeerBeacon(packet);
+        // Instantly reply with PEER_HELLO so the sender discovers us immediately without waiting for cron interval
+        this.sendPeerHello(packet.sender.userId);
+        break;
+
       case 'PEER_HELLO':
         await this.handlePeerBeacon(packet);
         break;
@@ -184,15 +223,14 @@ export class P2PNetworkService {
    * Registers/updates peer discovery
    */
   private async handlePeerBeacon(packet: NetworkPacket) {
-    const { userId, username, avatar, publicKeyPEM, keyFingerprint, connectionType } = packet.sender;
+    if (this.currentUser && packet.sender.userId === this.currentUser.userId) return;
+    const { userId, username, avatar, connectionType } = packet.sender;
     const existing = this.discoveredPeers.get(userId);
 
     const peerObj: PeerDevice = {
       deviceId: userId,
       username,
       avatar,
-      publicKey: publicKeyPEM,
-      fingerprint: keyFingerprint,
       connectionType: connectionType || 'LAN',
       lastSeen: Date.now(),
       status: 'connected',
@@ -206,7 +244,7 @@ export class P2PNetworkService {
   }
 
   /**
-   * Sends encrypted text message to recipient peer (FR-4, FR-15)
+   * Sends direct text message to recipient peer
    */
   async sendMessage(
     recipientPeer: PeerDevice,
@@ -216,26 +254,6 @@ export class P2PNetworkService {
     if (!this.currentUser) throw new Error('Identity not initialized');
 
     const messageId = crypto.randomUUID();
-    let isEncrypted = false;
-    let iv: string | undefined;
-    let ciphertext: string | undefined;
-
-    // Retrieve local private key JWK from IndexedDB for ECDH derivation
-    try {
-      const keyPair = await dbEngine.getKeyPair(this.currentUser.keyFingerprint);
-      if (keyPair && keyPair.privateKeyJWK && recipientPeer.publicKey) {
-        const sharedAESKey = await cryptoService.deriveSharedAESKey(
-          keyPair.privateKeyJWK,
-          recipientPeer.publicKey
-        );
-        const encryptedResult = await cryptoService.encryptPayload(content, sharedAESKey);
-        iv = encryptedResult.iv;
-        ciphertext = encryptedResult.ciphertext;
-        isEncrypted = true;
-      }
-    } catch (err) {
-      console.warn('E2E Key Derivation fallback to transport encryption:', err);
-    }
 
     const message: ChatMessage = {
       messageId,
@@ -245,9 +263,6 @@ export class P2PNetworkService {
       timestamp: Date.now(),
       status: 'sent',
       channel,
-      isEncrypted,
-      iv,
-      ciphertext,
     };
 
     // Save to local IndexedDB
@@ -262,17 +277,12 @@ export class P2PNetworkService {
           userId: this.currentUser.userId,
           username: this.currentUser.username,
           avatar: this.currentUser.avatar,
-          publicKeyPEM: this.currentUser.publicKeyPEM,
-          keyFingerprint: this.currentUser.keyFingerprint,
           connectionType: channel,
         },
         recipientId: recipientPeer.deviceId,
         payload: {
           messageId,
-          content: isEncrypted ? undefined : content,
-          iv,
-          ciphertext,
-          isEncrypted,
+          content,
           channel,
         },
         timestamp: Date.now(),
@@ -296,37 +306,16 @@ export class P2PNetworkService {
     if (!this.currentUser) return;
     if (packet.recipientId !== this.currentUser.userId) return;
 
-    const { messageId, content: rawContent, iv, ciphertext, isEncrypted, channel } = packet.payload;
-    let decryptedContent = rawContent || '';
-
-    // Decrypt E2E payload if encrypted
-    if (isEncrypted && iv && ciphertext) {
-      try {
-        const keyPair = await dbEngine.getKeyPair(this.currentUser.keyFingerprint);
-        if (keyPair && keyPair.privateKeyJWK && packet.sender.publicKeyPEM) {
-          const sharedAESKey = await cryptoService.deriveSharedAESKey(
-            keyPair.privateKeyJWK,
-            packet.sender.publicKeyPEM
-          );
-          decryptedContent = await cryptoService.decryptPayload(ciphertext, iv, sharedAESKey);
-        }
-      } catch (err) {
-        console.error('Failed to decrypt incoming message payload:', err);
-        decryptedContent = '[Decryption Error: Key mismatch]';
-      }
-    }
+    const { messageId, content, channel } = packet.payload;
 
     const incomingMsg: ChatMessage = {
       messageId,
       senderId: packet.sender.userId,
       receiverId: this.currentUser.userId,
-      content: decryptedContent,
+      content: content || '',
       timestamp: packet.timestamp || Date.now(),
       status: 'delivered',
       channel: channel || packet.sender.connectionType || 'LAN',
-      isEncrypted: Boolean(isEncrypted),
-      iv,
-      ciphertext,
     };
 
     // Save message locally
@@ -352,8 +341,6 @@ export class P2PNetworkService {
         userId: this.currentUser.userId,
         username: this.currentUser.username,
         avatar: this.currentUser.avatar,
-        publicKeyPEM: this.currentUser.publicKeyPEM,
-        keyFingerprint: this.currentUser.keyFingerprint,
         connectionType: this.activeChannel,
       },
       recipientId: recipientPeerId,
@@ -377,8 +364,6 @@ export class P2PNetworkService {
         userId: this.currentUser.userId,
         username: this.currentUser.username,
         avatar: this.currentUser.avatar,
-        publicKeyPEM: this.currentUser.publicKeyPEM,
-        keyFingerprint: this.currentUser.keyFingerprint,
         connectionType: this.activeChannel,
       },
       recipientId: recipientUserId,
@@ -393,15 +378,12 @@ export class P2PNetworkService {
    * Adds or generates a simulated local peer for testing multi-device P2P discovery
    */
   async createSimulatedPeer(name: string, connectionType: TransportChannel): Promise<PeerDevice> {
-    const keyPair = await cryptoService.generateKeyPair();
     const simulatedId = `sim_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
 
     const simulatedPeer: PeerDevice = {
       deviceId: simulatedId,
       username: name,
       avatar: ['#0284c7', '#7c3aed', '#059669', '#d97706', '#e11d48'][Math.floor(Math.random() * 5)],
-      publicKey: keyPair.publicKeyPEM,
-      fingerprint: keyPair.keyFingerprint,
       connectionType,
       lastSeen: Date.now(),
       status: 'connected',
@@ -431,41 +413,19 @@ export class P2PNetworkService {
       this.typingListeners.forEach((fn) => fn(peer.deviceId, true));
     }, 1200);
 
-    // 3. Stop typing and send encrypted reply
+    // 3. Stop typing and send reply
     setTimeout(async () => {
       this.typingListeners.forEach((fn) => fn(peer.deviceId, false));
 
       const responses = [
-        `Received via ${peer.connectionType}! Key fingerprint ${peer.fingerprint.substring(0, 9)} verified.`,
-        `FasDM Mesh active. Zero internet routing required for this transmission! 🚀`,
-        `Encrypted ECDH P-256 payload verified on local ${peer.connectionType} channel.`,
+        `Received via local ${peer.connectionType} channel!`,
+        `FasDM Mesh active. Zero internet routing required! 🚀`,
+        `Direct P2P payload confirmed on ${peer.connectionType}.`,
         `Got it! "${userMsgText}" received in ${peer.latencyMs || 12}ms.`,
       ];
 
       const replyText = responses[Math.floor(Math.random() * responses.length)];
       const replyMsgId = crypto.randomUUID();
-
-      let isEncrypted = false;
-      let iv: string | undefined;
-      let ciphertext: string | undefined;
-
-      try {
-        if (this.currentUser) {
-          const keyPair = await dbEngine.getKeyPair(this.currentUser.keyFingerprint);
-          if (keyPair && keyPair.privateKeyJWK) {
-            const sharedAESKey = await cryptoService.deriveSharedAESKey(
-              keyPair.privateKeyJWK,
-              peer.publicKey
-            );
-            const enc = await cryptoService.encryptPayload(replyText, sharedAESKey);
-            iv = enc.iv;
-            ciphertext = enc.ciphertext;
-            isEncrypted = true;
-          }
-        }
-      } catch (e) {
-        console.warn('Simulation E2E fallback:', e);
-      }
 
       const replyMessage: ChatMessage = {
         messageId: replyMsgId,
@@ -475,9 +435,6 @@ export class P2PNetworkService {
         timestamp: Date.now(),
         status: 'delivered',
         channel: peer.connectionType,
-        isEncrypted,
-        iv,
-        ciphertext,
       };
 
       await dbEngine.saveMessage(replyMessage);
@@ -487,3 +444,4 @@ export class P2PNetworkService {
 }
 
 export const networkService = new P2PNetworkService();
+

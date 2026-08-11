@@ -12,26 +12,59 @@ export const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>('splash');
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load existing profile from IndexedDB on application start
+  // Load profile with per-tab sessionStorage isolation & URL param support
   useEffect(() => {
-    async function loadSavedProfile() {
+    async function loadTabProfile() {
       try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const userParam = urlParams.get('user') || urlParams.get('node');
+
+        // Check tab-isolated sessionStorage first
+        const tabSession = sessionStorage.getItem('fasdm_tab_profile');
+        if (tabSession) {
+          const parsed = JSON.parse(tabSession);
+          setProfile(parsed);
+          setCurrentView('dashboard');
+          setIsLoading(false);
+          return;
+        }
+
+        // If URL has ?user=Alex or ?node=2
+        if (userParam) {
+          const handle = userParam.length > 2 ? userParam : `Node_${userParam}`;
+          const autoProfile: UserProfile = {
+            userId: `usr_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`,
+            username: handle,
+            avatar: '#0284c7',
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          };
+          sessionStorage.setItem('fasdm_tab_profile', JSON.stringify(autoProfile));
+          await dbEngine.saveProfile(autoProfile);
+          setProfile(autoProfile);
+          setCurrentView('dashboard');
+          setIsLoading(false);
+          return;
+        }
+
+        // Otherwise check IndexedDB
         const savedProfile = await dbEngine.getProfile();
         if (savedProfile) {
+          sessionStorage.setItem('fasdm_tab_profile', JSON.stringify(savedProfile));
           setProfile(savedProfile);
           setCurrentView('dashboard');
         } else {
           setCurrentView('splash');
         }
       } catch (err) {
-        console.error('Error opening IndexedDB profile:', err);
+        console.error('Error loading tab profile:', err);
         setCurrentView('splash');
       } finally {
         setIsLoading(false);
       }
     }
 
-    loadSavedProfile();
+    loadTabProfile();
   }, []);
 
   const handleStartSetup = () => {
@@ -39,6 +72,7 @@ export const App: React.FC = () => {
   };
 
   const handleProfileCreated = (newProfile: UserProfile) => {
+    sessionStorage.setItem('fasdm_tab_profile', JSON.stringify(newProfile));
     setProfile(newProfile);
     setCurrentView('dashboard');
   };
@@ -47,8 +81,15 @@ export const App: React.FC = () => {
     setCurrentView('setup');
   };
 
+  const handleNewTabNode = () => {
+    sessionStorage.removeItem('fasdm_tab_profile');
+    setProfile(null);
+    setCurrentView('setup');
+  };
+
   const handleResetProfile = async () => {
-    if (window.confirm('Are you sure you want to reset your local profile identity and keys?')) {
+    if (window.confirm('Are you sure you want to reset local data for this tab?')) {
+      sessionStorage.removeItem('fasdm_tab_profile');
       await dbEngine.clearAllData();
       setProfile(null);
       setCurrentView('splash');
@@ -63,7 +104,7 @@ export const App: React.FC = () => {
             <Radio size={32} />
           </div>
           <p className="text-slate-400 text-xs font-mono tracking-wider animate-pulse">
-            INITIALIZING INDEXEDDB & WEB CRYPTO ENGINE...
+            INITIALIZING INDEXEDDB & P2P MESH ENGINE...
           </p>
         </div>
       </div>
@@ -76,6 +117,7 @@ export const App: React.FC = () => {
       <Navbar
         profile={profile}
         onEditProfile={handleEditProfile}
+        onNewTabNode={handleNewTabNode}
         onResetProfile={handleResetProfile}
       />
 
