@@ -235,12 +235,18 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
         ) : (
           messages.map((msg) => {
             const isMe = msg.senderId === currentUser.userId;
+            const senderUsername = isMe ? currentUser.username : peer.username;
 
             return (
               <div
                 key={msg.messageId}
                 className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} fade-in-up`}
               >
+                {/* Username above message */}
+                <span className={`text-[11px] font-semibold mb-1 px-1 ${isMe ? 'text-blue-400' : 'text-cyan-400'}`}>
+                  {senderUsername}
+                </span>
+
                 <div
                   className={`max-w-[80%] rounded-2xl px-4 py-2.5 space-y-1 shadow-md text-xs sm:text-sm ${
                     isMe
