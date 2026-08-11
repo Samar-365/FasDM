@@ -8,7 +8,6 @@ import {
   Shield,
   QrCode,
   Radio,
-  Share2,
   Users,
   MessageSquare,
   LayoutDashboard,
@@ -164,17 +163,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
               </div>
             </div>
 
-            {/* System Status Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* System Status & Node Identity Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Card 1: Discovery Status */}
-              <div className="glass-panel p-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Discovered Peers</span>
-                  <Users size={18} className="text-cyan-400" />
-                </div>
-                <div>
-                  <div className="text-3xl font-bold text-white">{discoveredPeersCount}</div>
-                  <p className="text-xs text-slate-400 mt-1">Active nodes ready for direct local messaging</p>
+              <div className="glass-panel p-5 space-y-3 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Discovered Peers</span>
+                    <Users size={18} className="text-cyan-400" />
+                  </div>
+                  <div>
+                    <div className="text-3xl font-bold text-white">{discoveredPeersCount}</div>
+                    <p className="text-xs text-slate-400 mt-1">Active nodes ready for direct local messaging</p>
+                  </div>
                 </div>
                 <button
                   onClick={() => setActiveTab('peers')}
@@ -185,80 +186,35 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
               </div>
 
               {/* Card 2: Active Transport */}
-              <div className="glass-panel p-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Active Channel</span>
-                  <Radio size={18} className="text-emerald-400" />
+              <div className="glass-panel p-5 space-y-3 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Active Channel</span>
+                    <Radio size={18} className="text-emerald-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white mb-1">Local Mesh Transport</h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Auto-switching transport: Local LAN Wi-Fi, Wi-Fi Direct, and Bluetooth LE.
+                    </p>
+                  </div>
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-white mb-1">Local Mesh Transport</h4>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    Auto-switching transport: Local LAN Wi-Fi, Wi-Fi Direct, and Bluetooth LE.
-                  </p>
-                </div>
-                <span className="badge badge-emerald text-xs">High Speed P2P Ready</span>
-              </div>
-            </div>
-
-            {/* Feature Architecture Roadmap & Node Identity */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 glass-panel p-5 space-y-3">
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <Share2 size={18} className="text-blue-400" /> Core Module Architecture Roadmap
-                </h3>
-
-                <div className="space-y-2.5">
-                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded bg-emerald-950 text-emerald-400 flex items-center justify-center font-bold text-xs">
-                        M1
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-semibold text-white">Module 1: User Profile & Identity</h4>
-                        <p className="text-[11px] text-slate-400">Local profile management, IndexedDB storage, and QR Code generation</p>
-                      </div>
-                    </div>
-                    <span className="badge badge-emerald">Complete</span>
-                  </div>
-
-                  <div className="p-3 rounded-lg bg-slate-900 border border-emerald-500/40 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded bg-cyan-950 text-cyan-400 flex items-center justify-center font-bold text-xs">
-                        M2
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-semibold text-white">Module 2: Device Discovery & P2P Messaging</h4>
-                        <p className="text-[11px] text-slate-400">Local Wi-Fi P2P Transport, Peer Scanner, 1-to-1 Messaging, Read Receipts, Typing Indicator</p>
-                      </div>
-                    </div>
-                    <span className="badge badge-emerald">Completed & Active</span>
-                  </div>
-
-                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between opacity-60">
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded bg-purple-950 text-purple-400 flex items-center justify-center font-bold text-xs">
-                        M3
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-semibold text-white">Module 3: Group Chat & Collaboration Tools</h4>
-                        <p className="text-[11px] text-slate-400">Group messaging, File sharing, Shared Whiteboard & Checklist</p>
-                      </div>
-                    </div>
-                    <span className="badge badge-purple">Up Next</span>
-                  </div>
+                  <span className="badge badge-emerald text-xs">High Speed P2P Ready</span>
                 </div>
               </div>
 
-              {/* Node Identity Card */}
-              <div className="glass-panel p-5 flex flex-col justify-between">
+              {/* Card 3: Node Identity */}
+              <div className="glass-panel p-5 flex flex-col justify-between space-y-3">
                 <div>
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
-                    Node Identity Card
-                  </h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Node Identity</span>
+                    <QrCode size={18} className="text-blue-400" />
+                  </div>
 
-                  <div className="text-center py-4">
+                  <div className="text-center py-2">
                     <div
-                      className="w-16 h-16 mx-auto rounded-xl flex items-center justify-center text-white font-bold text-2xl mb-3 shadow-lg"
+                      className="w-12 h-12 mx-auto rounded-xl flex items-center justify-center text-white font-bold text-lg mb-2 shadow"
                       style={{
                         background: profile.avatar.startsWith('http') || profile.avatar.startsWith('data:') ? undefined : profile.avatar,
                       }}
@@ -269,8 +225,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
                         profile.username.charAt(0).toUpperCase()
                       )}
                     </div>
-                    <h4 className="text-lg font-bold text-white">{profile.username}</h4>
-                    <p className="text-xs text-slate-400 font-mono mt-0.5">{profile.userId}</p>
+                    <h4 className="text-sm font-bold text-white">{profile.username}</h4>
+                    <p className="text-[11px] text-slate-400 font-mono mt-0.5 truncate">{profile.userId}</p>
                   </div>
                 </div>
 
