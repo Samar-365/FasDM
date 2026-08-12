@@ -1,7 +1,7 @@
-import { UserProfile, PeerDevice, ChatMessage, GroupChat, GroupMessage } from '../types';
+import { UserProfile, PeerDevice, ChatMessage, GroupChat, GroupMessage, SharedFile } from '../types';
 
 const DB_NAME = 'FasDMMeshDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 export class LocalStorageEngine {
   private dbPromise: Promise<IDBDatabase> | null = null;
@@ -48,6 +48,15 @@ export class LocalStorageEngine {
           const gMsgStore = db.createObjectStore('group_messages', { keyPath: 'messageId' });
           gMsgStore.createIndex('groupId', 'groupId', { unique: false });
           gMsgStore.createIndex('timestamp', 'timestamp', { unique: false });
+        }
+
+        // Files Store (Module 7)
+        if (!db.objectStoreNames.contains('files')) {
+          const fileStore = db.createObjectStore('files', { keyPath: 'fileId' });
+          fileStore.createIndex('senderId', 'senderId', { unique: false });
+          fileStore.createIndex('receiverId', 'receiverId', { unique: false });
+          fileStore.createIndex('groupId', 'groupId', { unique: false });
+          fileStore.createIndex('timestamp', 'timestamp', { unique: false });
         }
       };
 
@@ -258,6 +267,91 @@ export class LocalStorageEngine {
         filtered.sort((a, b) => a.timestamp - b.timestamp);
         resolve(filtered);
       };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // --- File Store Operations (Module 7) ---
+  async saveFile(file: SharedFile): Promise<void> {
+    const db = await this.initDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('files', 'readwrite');
+      const store = tx.objectStore('files');
+      const request = store.put(file);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getFile(fileId: string): Promise<SharedFile | null> {
+    const db = await this.initDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('files', 'readonly');
+      const store = tx.objectStore('files');
+      const request = store.get(fileId);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getFilesForPeer(myId: string, peerId: string): Promise<SharedFile[]> {
+    const db = await this.initDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('files', 'readonly');
+      const store = tx.objectStore('files');
+      const request = store.getAll();
+      request.onsuccess = () => {
+        const allFiles = (request.result as SharedFile[]) || [];
+        const filtered = allFiles.filter(
+          (f) =>
+            (f.senderId === myId && f.receiverId === peerId) ||
+            (f.senderId === peerId && f.receiverId === myId)
+        );
+        filtered.sort((a, b) => b.timestamp - a.timestamp);
+        resolve(filtered);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getFilesForGroup(groupId: string): Promise<SharedFile[]> {
+    const db = await this.initDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('files', 'readonly');
+      const store = tx.objectStore('files');
+      const request = store.getAll();
+      request.onsuccess = () => {
+        const allFiles = (request.result as SharedFile[]) || [];
+        const filtered = allFiles.filter((f) => f.groupId === groupId);
+        filtered.sort((a, b) => b.timestamp - a.timestamp);
+        resolve(filtered);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getAllFiles(): Promise<SharedFile[]> {
+    const db = await this.initDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('files', 'readonly');
+      const store = tx.objectStore('files');
+      const request = store.getAll();
+      request.onsuccess = () => {
+        const allFiles = (request.result as SharedFile[]) || [];
+        allFiles.sort((a, b) => b.timestamp - a.timestamp);
+        resolve(allFiles);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async deleteFile(fileId: string): Promise<void> {
+    const db = await this.initDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('files', 'readwrite');
+      const store = tx.objectStore('files');
+      const request = store.delete(fileId);
+      request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
   }

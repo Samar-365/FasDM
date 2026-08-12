@@ -7,6 +7,7 @@ import {
   NetworkPacket,
   TransportChannel,
   MessageStatus,
+  SharedFile,
 } from '../types';
 import { dbEngine } from './db';
 
@@ -18,6 +19,7 @@ type TypingListener = (peerId: string, isTyping: boolean) => void;
 type AckListener = (messageId: string, status: MessageStatus) => void;
 type GroupListener = (groups: GroupChat[]) => void;
 type GroupMessageListener = (groupId: string, message: GroupMessage) => void;
+type FileListener = (file: SharedFile) => void;
 
 export class P2PNetworkService {
   private broadcastChannel: BroadcastChannel | null = null;
@@ -33,6 +35,7 @@ export class P2PNetworkService {
   private ackListeners: Set<AckListener> = new Set();
   private groupListeners: Set<GroupListener> = new Set();
   private groupMessageListeners: Set<GroupMessageListener> = new Set();
+  private fileListeners: Set<FileListener> = new Set();
 
   constructor() {
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
@@ -141,6 +144,11 @@ export class P2PNetworkService {
   subscribeGroupMessages(listener: GroupMessageListener) {
     this.groupMessageListeners.add(listener);
     return () => this.groupMessageListeners.delete(listener);
+  }
+
+  subscribeFiles(listener: FileListener) {
+    this.fileListeners.add(listener);
+    return () => this.fileListeners.delete(listener);
   }
 
   private notifyPeerListeners() {
@@ -278,6 +286,17 @@ export class P2PNetworkService {
           this.groups.delete(gId);
           await dbEngine.deleteGroup(gId);
           this.notifyGroupListeners();
+        }
+        break;
+
+      case 'FILE_TRANSFER':
+        await this.handleIncomingFileTransfer(packet);
+        break;
+
+      case 'FILE_ACK':
+        if (packet.recipientId === this.currentUser.userId) {
+          const { fileId } = packet.payload;
+          console.log(`[P2P Network] File transfer ACK received for ${fileId}`);
         }
         break;
 
@@ -702,6 +721,189 @@ export class P2PNetworkService {
         timestamp: Date.now(),
       };
       this.broadcastChannel.postMessage(packet);
+    }
+  }
+
+  // =========================================================================
+  // FILE SHARING ENGINE (MODULE 7)
+  // =========================================================================
+
+  /**
+   * Sends file to 1-to-1 peer or group with automatic transport escalation to Wi-Fi Direct for >5MB (FR-6)
+   */
+  async sendFile(
+    target: { peer?: PeerDevice; groupId?: string },
+    fileObj: { name: string; size: number; type: string; dataUrl: string },
+    channelOverride?: TransportChannel
+  ): Promise<SharedFile> {
+    if (!this.currentUser) throw new Error('Identity not initialized');
+
+    // Auto-escalate channel to Wi-Fi Direct if file size > 5MB
+    const isLargeFile = fileObj.size > 5 * 1024 * 1024; // > 5MB
+    const effectiveChannel: TransportChannel = isLargeFile
+      ? 'Wi-Fi Direct'
+      : channelOverride || target.peer?.connectionType || this.activeChannel;
+
+    const fileId = `file_${crypto.randomUUID()}`;
+
+    const sharedFile: SharedFile = {
+      fileId,
+      fileName: fileObj.name,
+      fileSize: fileObj.size,
+      fileType: fileObj.type,
+      fileData: fileObj.dataUrl,
+      senderId: this.currentUser.userId,
+      senderName: this.currentUser.username,
+      receiverId: target.peer?.deviceId,
+      groupId: target.groupId,
+      timestamp: Date.now(),
+      channel: effectiveChannel,
+      escalatedToWifiDirect: isLargeFile,
+    };
+
+    // Save file in local IndexedDB
+    await dbEngine.saveFile(sharedFile);
+    this.fileListeners.forEach((fn) => fn(sharedFile));
+
+    // Attach file to a ChatMessage or GroupMessage so it renders inline in timeline
+    if (target.peer) {
+      const msgId = crypto.randomUUID();
+      const chatMsg: ChatMessage = {
+        messageId: msgId,
+        senderId: this.currentUser.userId,
+        receiverId: target.peer.deviceId,
+        content: `📎 Shared file: ${fileObj.name}`,
+        timestamp: Date.now(),
+        status: 'sent',
+        channel: effectiveChannel,
+        fileAttachment: sharedFile,
+      };
+      await dbEngine.saveMessage(chatMsg);
+      this.messageListeners.forEach((fn) => fn(chatMsg));
+
+      // Handle simulated peer response
+      if (target.peer.isSimulated) {
+        setTimeout(async () => {
+          const simReplyId = crypto.randomUUID();
+          const responseMsg: ChatMessage = {
+            messageId: simReplyId,
+            senderId: target.peer!.deviceId,
+            receiverId: this.currentUser!.userId,
+            content: `✅ Received file "${fileObj.name}" (${(fileObj.size / (1024 * 1024)).toFixed(2)} MB) over ${effectiveChannel}!`,
+            timestamp: Date.now(),
+            status: 'delivered',
+            channel: effectiveChannel,
+          };
+          await dbEngine.saveMessage(responseMsg);
+          this.messageListeners.forEach((fn) => fn(responseMsg));
+        }, 2000);
+      }
+    } else if (target.groupId) {
+      const msgId = crypto.randomUUID();
+      const groupMsg: GroupMessage = {
+        messageId: msgId,
+        groupId: target.groupId,
+        senderId: this.currentUser.userId,
+        senderName: this.currentUser.username,
+        senderAvatar: this.currentUser.avatar,
+        content: `📎 Shared file: ${fileObj.name}`,
+        timestamp: Date.now(),
+        channel: effectiveChannel,
+        fileAttachment: sharedFile,
+      };
+      await dbEngine.saveGroupMessage(groupMsg);
+      this.groupMessageListeners.forEach((fn) => fn(target.groupId!, groupMsg));
+    }
+
+    // Broadcast FILE_TRANSFER packet across mesh transport
+    if (this.broadcastChannel) {
+      const packet: NetworkPacket = {
+        id: crypto.randomUUID(),
+        type: 'FILE_TRANSFER',
+        sender: {
+          userId: this.currentUser.userId,
+          username: this.currentUser.username,
+          avatar: this.currentUser.avatar,
+          connectionType: effectiveChannel,
+        },
+        recipientId: target.peer?.deviceId,
+        payload: {
+          sharedFile,
+        },
+        timestamp: Date.now(),
+      };
+      this.broadcastChannel.postMessage(packet);
+    }
+
+    return sharedFile;
+  }
+
+  /**
+   * Processes incoming FILE_TRANSFER packet
+   */
+  private async handleIncomingFileTransfer(packet: NetworkPacket) {
+    if (!this.currentUser || !packet.payload?.sharedFile) return;
+
+    const file: SharedFile = packet.payload.sharedFile;
+
+    // Check if packet is intended for me or for a group I belong to
+    const isForMe = file.receiverId === this.currentUser.userId;
+    const isForMyGroup = file.groupId && this.groups.has(file.groupId);
+
+    if (!isForMe && !isForMyGroup) return;
+
+    // Save received file locally in IndexedDB
+    await dbEngine.saveFile(file);
+    this.fileListeners.forEach((fn) => fn(file));
+
+    // Store inline timeline message
+    if (isForMe) {
+      const msgId = crypto.randomUUID();
+      const incomingMsg: ChatMessage = {
+        messageId: msgId,
+        senderId: file.senderId,
+        receiverId: this.currentUser.userId,
+        content: `📎 Shared file: ${file.fileName}`,
+        timestamp: file.timestamp || Date.now(),
+        status: 'delivered',
+        channel: file.channel,
+        fileAttachment: file,
+      };
+      await dbEngine.saveMessage(incomingMsg);
+      this.messageListeners.forEach((fn) => fn(incomingMsg));
+
+      // Send ACK
+      if (this.broadcastChannel) {
+        const ackPacket: NetworkPacket = {
+          id: crypto.randomUUID(),
+          type: 'FILE_ACK',
+          sender: {
+            userId: this.currentUser.userId,
+            username: this.currentUser.username,
+            avatar: this.currentUser.avatar,
+            connectionType: file.channel,
+          },
+          recipientId: file.senderId,
+          payload: { fileId: file.fileId },
+          timestamp: Date.now(),
+        };
+        this.broadcastChannel.postMessage(ackPacket);
+      }
+    } else if (isForMyGroup && file.groupId) {
+      const msgId = crypto.randomUUID();
+      const gMsg: GroupMessage = {
+        messageId: msgId,
+        groupId: file.groupId,
+        senderId: file.senderId,
+        senderName: file.senderName,
+        senderAvatar: packet.sender.avatar || '',
+        content: `📎 Shared file: ${file.fileName}`,
+        timestamp: file.timestamp || Date.now(),
+        channel: file.channel,
+        fileAttachment: file,
+      };
+      await dbEngine.saveGroupMessage(gMsg);
+      this.groupMessageListeners.forEach((fn) => fn(file.groupId!, gMsg));
     }
   }
 }

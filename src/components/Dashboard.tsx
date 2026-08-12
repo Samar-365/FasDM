@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile, PeerDevice, DashboardTab } from '../types';
+import { UserProfile, PeerDevice, DashboardTab, SharedFile } from '../types';
 import { cryptoService } from '../services/crypto';
 import { networkService } from '../services/network';
+import { dbEngine } from '../services/db';
 import { PeerScanner } from './PeerScanner';
 import { ChatRoom } from './ChatRoom';
 import { GroupChatRoom } from './GroupChatRoom';
+import { FileViewerModal } from './FileViewerModal';
 import {
   Shield,
   QrCode,
@@ -12,7 +14,8 @@ import {
   Users,
   MessageSquare,
   LayoutDashboard,
-  ArrowRight
+  ArrowRight,
+  FileText
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -24,11 +27,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
   const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
   const [selectedPeerForChat, setSelectedPeerForChat] = useState<PeerDevice | null>(null);
   const [discoveredPeersCount, setDiscoveredPeersCount] = useState(0);
+  const [sharedFilesCount, setSharedFilesCount] = useState(0);
+  const [selectedFileForViewer, setSelectedFileForViewer] = useState<SharedFile | null>(null);
 
   const [showQRModal, setShowQRModal] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
 
-  // Initialize P2P Network Service & Peer Counter
+  // Initialize P2P Network Service & Counters
   useEffect(() => {
     networkService.start(profile);
 
@@ -36,11 +41,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
       setDiscoveredPeersCount(peers.length);
     });
 
+    const unsubFiles = networkService.subscribeFiles(() => {
+      loadFilesCount();
+    });
+
+    loadFilesCount();
+
     return () => {
       unsubPeers();
+      unsubFiles();
       networkService.stop();
     };
   }, [profile]);
+
+  const loadFilesCount = async () => {
+    try {
+      const files = await dbEngine.getAllFiles();
+      setSharedFilesCount(files.length);
+    } catch (err) {
+      console.warn('Failed to load files count:', err);
+    }
+  };
 
   const openQRModal = async () => {
     try {
@@ -193,22 +214,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
                 </button>
               </div>
 
-              {/* Card 2: Active Transport */}
+              {/* Card 2: Shared P2P Files */}
               <div className="glass-panel p-5 space-y-3 flex flex-col justify-between">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Active Channel</span>
-                    <Radio size={18} className="text-emerald-400" />
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Shared Files Engine</span>
+                    <FileText size={18} className="text-blue-400" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-white mb-1">Local Mesh Transport</h4>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      Auto-switching transport: Local LAN Wi-Fi, Wi-Fi Direct, and Bluetooth LE.
+                    <div className="text-3xl font-bold text-white">{sharedFilesCount}</div>
+                    <p className="text-xs text-slate-400 mt-1">
+                      P2P media & document files transferred offline (FR-6)
                     </p>
                   </div>
                 </div>
                 <div>
-                  <span className="badge badge-emerald text-xs">High Speed P2P Ready</span>
+                  <span className="badge badge-cyan text-[10px]">Auto Wi-Fi Direct &gt;5MB</span>
                 </div>
               </div>
 
@@ -258,6 +279,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
               currentUser={profile}
               peer={selectedPeerForChat}
               onBackToScanner={() => setActiveTab('peers')}
+              onSelectFile={(file) => setSelectedFileForViewer(file)}
             />
           ) : (
             <div className="glass-panel p-12 text-center space-y-3 fade-in-up">
@@ -282,10 +304,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
 
         {/* TAB 4: GROUP CHAT HUB */}
         {activeTab === 'groups' && (
-          <GroupChatRoom currentUser={profile} />
+          <GroupChatRoom
+            currentUser={profile}
+            onSelectFile={(file) => setSelectedFileForViewer(file)}
+          />
         )}
 
       </div>
+
+      {/* File Viewer Modal */}
+      {selectedFileForViewer && (
+        <FileViewerModal
+          file={selectedFileForViewer}
+          onClose={() => setSelectedFileForViewer(null)}
+          onDelete={async (fileId) => {
+            await dbEngine.deleteFile(fileId);
+            setSelectedFileForViewer(null);
+            loadFilesCount();
+          }}
+        />
+      )}
 
       {/* QR Modal */}
       {showQRModal && (

@@ -24,6 +24,21 @@ export interface PeerDevice {
   isSimulated?: boolean;
 }
 
+export interface SharedFile {
+  fileId: string;
+  fileName: string;
+  fileSize: number; // Bytes
+  fileType: string; // Mime type
+  fileData: string; // Base64 or Blob Data URL
+  senderId: string;
+  senderName: string;
+  receiverId?: string; // target user for 1-to-1
+  groupId?: string; // target group
+  timestamp: number;
+  channel: TransportChannel;
+  escalatedToWifiDirect?: boolean;
+}
+
 export interface ChatMessage {
   messageId: string;
   senderId: string;
@@ -32,6 +47,7 @@ export interface ChatMessage {
   timestamp: number;
   status: MessageStatus;
   channel: TransportChannel;
+  fileAttachment?: SharedFile;
 }
 
 export interface GroupMember {
@@ -62,6 +78,7 @@ export interface GroupMessage {
   content: string;
   timestamp: number;
   channel: TransportChannel;
+  fileAttachment?: SharedFile;
 }
 
 export type NetworkPacketType = 
@@ -74,7 +91,9 @@ export type NetworkPacketType =
   | 'GROUP_CREATE'
   | 'GROUP_MESSAGE'
   | 'GROUP_MEMBER_LEAVE'
-  | 'GROUP_DELETE';
+  | 'GROUP_DELETE'
+  | 'FILE_TRANSFER'
+  | 'FILE_ACK';
 
 export interface NetworkPacket {
   id: string;

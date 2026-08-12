@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { UserProfile, PeerDevice, ChatMessage, TransportChannel, MessageStatus } from '../types';
+import { UserProfile, PeerDevice, ChatMessage, TransportChannel, MessageStatus, SharedFile } from '../types';
 import { networkService } from '../services/network';
 import { dbEngine } from '../services/db';
 import {
@@ -12,24 +12,32 @@ import {
   Smile,
   Trash2,
   ChevronLeft,
-  MessageSquare
+  MessageSquare,
+  Paperclip,
+  FileText,
+  Eye,
+  Download,
+  Loader2
 } from 'lucide-react';
 
 interface ChatRoomProps {
   currentUser: UserProfile;
   peer: PeerDevice;
   onBackToScanner?: () => void;
+  onSelectFile?: (file: SharedFile) => void;
 }
 
-export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToScanner }) => {
+export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToScanner, onSelectFile }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [activeChannel, setActiveChannel] = useState<TransportChannel>(peer.connectionType);
   const [isPeerTyping, setIsPeerTyping] = useState(false);
   const [showQuickEmojis, setShowQuickEmojis] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimerRef = useRef<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load chat history & subscribe to live P2P network events
   useEffect(() => {
@@ -141,6 +149,38 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
   const handleChannelSwitch = (channel: TransportChannel) => {
     setActiveChannel(channel);
     networkService.setTransportChannel(channel);
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 25 * 1024 * 1024) {
+      alert('File size exceeds maximum limit of 25MB.');
+      return;
+    }
+
+    setIsUploading(true);
+    const reader = new FileReader();
+
+    reader.onload = async () => {
+      try {
+        const dataUrl = reader.result as string;
+        await networkService.sendFile(
+          { peer },
+          { name: file.name, size: file.size, type: file.type, dataUrl },
+          activeChannel
+        );
+      } catch (err) {
+        console.error('Failed to send file:', err);
+        alert('Failed to send file over P2P transport');
+      } finally {
+        setIsUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -256,6 +296,42 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
                 >
                   <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
 
+                  {/* Inline File Attachment Card */}
+                  {msg.fileAttachment && (
+                    <div className="mt-2.5 p-3 rounded-xl bg-slate-950/80 border border-slate-700/90 space-y-2 text-slate-100">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="p-2 rounded-lg bg-blue-600/20 text-blue-400 shrink-0">
+                          <FileText size={20} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-white truncate" title={msg.fileAttachment.fileName}>
+                            {msg.fileAttachment.fileName}
+                          </p>
+                          <p className="text-[10px] font-mono text-slate-400">
+                            {(msg.fileAttachment.fileSize / (1024 * 1024)).toFixed(2)} MB • {msg.fileAttachment.channel}
+                            {msg.fileAttachment.escalatedToWifiDirect && ' (⚡ Wi-Fi Direct)'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-1.5 border-t border-slate-800">
+                        <button
+                          onClick={() => onSelectFile && onSelectFile(msg.fileAttachment!)}
+                          className="flex-1 py-1.5 px-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-[11px] font-medium text-white flex items-center justify-center gap-1.5 transition"
+                        >
+                          <Eye size={12} /> Preview
+                        </button>
+                        <a
+                          href={msg.fileAttachment.fileData}
+                          download={msg.fileAttachment.fileName}
+                          className="py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-medium text-slate-200 flex items-center justify-center gap-1.5 transition"
+                        >
+                          <Download size={12} /> Download
+                        </a>
+                      </div>
+                    </div>
+                  )}
+
                   <div
                     className={`flex items-center justify-end gap-1.5 text-[10px] font-mono ${
                       isMe ? 'text-blue-200' : 'text-slate-400'
@@ -312,11 +388,40 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
         </div>
       )}
 
+      {/* Hidden File Input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+
+      {/* Uploading File Bar */}
+      {isUploading && (
+        <div className="px-4 py-2 bg-blue-950/80 border-t border-blue-800 flex items-center justify-between text-xs text-blue-300 animate-pulse shrink-0">
+          <span className="flex items-center gap-2 font-mono">
+            <Loader2 size={14} className="animate-spin text-blue-400" />
+            Transmitting file over P2P transport ({activeChannel})...
+          </span>
+          <span className="text-[10px] font-mono text-blue-400 uppercase">FR-6 Engine</span>
+        </div>
+      )}
+
       {/* Bottom Message Input Bar */}
       <form
         onSubmit={handleSendMessage}
         className="p-3 bg-slate-900 border-t border-slate-800 flex items-center gap-2 shrink-0"
       >
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+          className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-cyan-400 transition disabled:opacity-50"
+          title="Attach P2P File (Max 25MB)"
+        >
+          <Paperclip size={18} />
+        </button>
+
         <button
           type="button"
           onClick={() => setShowQuickEmojis(!showQuickEmojis)}
@@ -336,7 +441,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
 
         <button
           type="submit"
-          disabled={!inputText.trim()}
+          disabled={!inputText.trim() || isUploading}
           className="btn btn-primary text-xs py-2 px-4 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Send size={14} /> Send

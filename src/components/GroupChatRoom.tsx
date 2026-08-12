@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { UserProfile, GroupChat, GroupMessage, PeerDevice, TransportChannel } from '../types';
+import { UserProfile, GroupChat, GroupMessage, PeerDevice, TransportChannel, SharedFile } from '../types';
 import { networkService } from '../services/network';
 import { dbEngine } from '../services/db';
 import {
@@ -14,19 +14,26 @@ import {
   MessageSquare,
   Radio,
   Smile,
-  Info
+  Info,
+  Paperclip,
+  FileText,
+  Eye,
+  Download,
+  Loader2
 } from 'lucide-react';
 
 interface GroupChatRoomProps {
   currentUser: UserProfile;
+  onSelectFile?: (file: SharedFile) => void;
 }
 
-export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser }) => {
+export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSelectFile }) => {
   const [groups, setGroups] = useState<GroupChat[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<GroupChat | null>(null);
   const [messages, setMessages] = useState<GroupMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [availablePeers, setAvailablePeers] = useState<PeerDevice[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   
   // Modals state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -39,6 +46,7 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser }) => 
   const [selectedPeerIds, setSelectedPeerIds] = useState<string[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 1. Subscribe to live P2P groups list and available peers
   useEffect(() => {
@@ -169,6 +177,38 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser }) => 
     }
   };
 
+  const handleGroupFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedGroup) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 25 * 1024 * 1024) {
+      alert('File size exceeds maximum limit of 25MB.');
+      return;
+    }
+
+    setIsUploading(true);
+    const reader = new FileReader();
+
+    reader.onload = async () => {
+      try {
+        const dataUrl = reader.result as string;
+        await networkService.sendFile(
+          { groupId: selectedGroup.groupId },
+          { name: file.name, size: file.size, type: file.type, dataUrl }
+        );
+      } catch (err) {
+        console.error('Failed to send file to group:', err);
+        alert('Failed to send file across group transport');
+      } finally {
+        setIsUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+
+    reader.readAsDataURL(file);
+  };
+
   const isAdmin = selectedGroup?.adminId === currentUser.userId;
 
   return (
@@ -296,6 +336,42 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser }) => 
                     >
                       <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
 
+                      {/* Inline Group File Attachment Card */}
+                      {msg.fileAttachment && (
+                        <div className="mt-2.5 p-3 rounded-xl bg-slate-950/80 border border-slate-700/90 space-y-2 text-slate-100">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="p-2 rounded-lg bg-blue-600/20 text-blue-400 shrink-0">
+                              <FileText size={20} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-bold text-white truncate" title={msg.fileAttachment.fileName}>
+                                {msg.fileAttachment.fileName}
+                              </p>
+                              <p className="text-[10px] font-mono text-slate-400">
+                                {(msg.fileAttachment.fileSize / (1024 * 1024)).toFixed(2)} MB • {msg.fileAttachment.channel}
+                                {msg.fileAttachment.escalatedToWifiDirect && ' (⚡ Wi-Fi Direct)'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-1.5 border-t border-slate-800">
+                            <button
+                              onClick={() => onSelectFile && onSelectFile(msg.fileAttachment!)}
+                              className="flex-1 py-1.5 px-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-[11px] font-medium text-white flex items-center justify-center gap-1.5 transition"
+                            >
+                              <Eye size={12} /> Preview
+                            </button>
+                            <a
+                              href={msg.fileAttachment.fileData}
+                              download={msg.fileAttachment.fileName}
+                              className="py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-medium text-slate-200 flex items-center justify-center gap-1.5 transition"
+                            >
+                              <Download size={12} /> Download
+                            </a>
+                          </div>
+                        </div>
+                      )}
+
                       <div
                         className={`flex items-center justify-end gap-1 text-[10px] font-mono ${
                           isMe ? 'text-blue-200' : 'text-slate-400'
@@ -331,11 +407,40 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser }) => 
             </div>
           )}
 
+          {/* Hidden File Input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleGroupFileSelect}
+            className="hidden"
+          />
+
+          {/* Uploading File Indicator */}
+          {isUploading && (
+            <div className="px-4 py-2 bg-blue-950/80 border-t border-blue-800 flex items-center justify-between text-xs text-blue-300 animate-pulse shrink-0">
+              <span className="flex items-center gap-2 font-mono">
+                <Loader2 size={14} className="animate-spin text-blue-400" />
+                Distributing file to group members across P2P mesh...
+              </span>
+              <span className="text-[10px] font-mono text-blue-400 uppercase">FR-6 Engine</span>
+            </div>
+          )}
+
           {/* Bottom Message Input Bar */}
           <form
             onSubmit={handleSendMessage}
             className="p-3 bg-slate-900 border-t border-slate-800 flex items-center gap-2 shrink-0"
           >
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-cyan-400 transition disabled:opacity-50"
+              title="Attach P2P File (Max 25MB)"
+            >
+              <Paperclip size={18} />
+            </button>
+
             <button
               type="button"
               onClick={() => setShowQuickEmojis(!showQuickEmojis)}
@@ -355,7 +460,7 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser }) => 
 
             <button
               type="submit"
-              disabled={!inputText.trim()}
+              disabled={!inputText.trim() || isUploading}
               className="btn btn-primary text-xs py-2 px-4 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Send size={14} /> Send Group

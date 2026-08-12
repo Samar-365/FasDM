@@ -95,10 +95,10 @@ MODULE 7: Peer-to-Peer File Sharing Engine
 - Purpose: Transfers media and documents directly between connected nodes.
 - Requirements: FR-6 (File Sharing)
 - Key Components: src/components/FileViewerModal.tsx, src/services/network.ts, src/services/db.ts
-- Status: PENDING ⏳ (Next Up for Implementation)
+- Status: COMPLETED ✅
 - Specifications:
   * Support for PDF, PNG, JPG, MP4, ZIP, PPT, and DOCX files up to 25MB.
-  * Base64 / ArrayBuffer chunked P2P transmission over FILE_TRANSFER network packets.
+  * Base64 / ArrayBuffer P2P transmission over FILE_TRANSFER network packets.
   * Automatic transport escalation to Wi-Fi Direct for large file payloads (>5MB).
   * In-app file viewer preview and browser file download triggers.
 
@@ -174,7 +174,7 @@ MODULE 12: Mesh Routing & Channel Auto-Selection
  5. Dashboard / Main Hub UI Module   (Completed ✅ - Overview stats, active channels, peer cards)
  6. One-to-One Chat UI Module        (Completed ✅ - Chat timeline, message input, ticks)
  7. Group Chat UI Module             (Completed ✅ - Group chat room, member list, admin controls)
- 8. File Viewer UI Module            (Pending ⏳ - Attachment preview, document launcher, progress)
+ 8. File Viewer UI Module            (Completed ✅ - Attachment preview, document launcher, progress)
  9. Shared Whiteboard UI Module      (Pending ⏳ - Real-time canvas drawing board & controls)
 10. Shared Checklist UI Module       (Pending ⏳ - Interactive task list & sync status)
 11. Sticky Notes UI Module          (Pending ⏳ - Multi-color collaborative notes board)
@@ -193,7 +193,7 @@ Module 3: QR Code Pairing               | FR-3           | Completed ✅ (QR Ide
 Module 4: One-to-One Encrypted Chat     | FR-4, FR-15    | Completed ✅ (Direct P2P & Receipts)
 Module 5: Message Status & Typing       | FR-8, FR-9     | Completed ✅ (ACKs & Typing Status)
 Module 6: Group Messaging & Admin       | FR-5           | Completed ✅ (Group Hub & Admin CRUD)
-Module 7: P2P File Sharing Engine       | FR-6           | Pending ⏳ (File Attachments & Chunking)
+Module 7: P2P File Sharing Engine       | FR-6           | Completed ✅ (File Attachments & Auto Escalation)
 Module 8: Voice Notes & Audio           | FR-7           | Pending ⏳ (MediaRecorder Audio Engine)
 Module 9: Emergency Broadcast System   | FR-10          | Pending ⏳ (Priority Alert Banner & Push)
 Module 10: Shared Collaboration Suite   | FR-11,12,13    | Pending ⏳ (Whiteboard / Checklist / Notes)
