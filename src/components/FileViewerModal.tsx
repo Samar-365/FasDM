@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { SharedFile } from '../types';
 import {
   X,
@@ -27,6 +27,17 @@ export const FileViewerModal: React.FC<FileViewerModalProps> = ({
   onClose,
   onDelete,
 }) => {
+  // ESC key listener to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   if (!file) return null;
 
   const isImage = file.fileType.startsWith('image/');
@@ -66,13 +77,28 @@ export const FileViewerModal: React.FC<FileViewerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md fade-in">
-      <div className="glass-panel w-full max-w-2xl bg-slate-900/95 border border-slate-700/80 rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md fade-in cursor-pointer"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="glass-panel w-full max-w-2xl bg-slate-900/95 border border-slate-700/80 rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] relative cursor-default"
+      >
         
+        {/* Top Floating Close Icon for extra visibility */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 z-30 p-2 rounded-full bg-slate-950/90 text-slate-300 hover:text-white hover:bg-rose-600 border border-slate-700 transition shadow-xl flex items-center justify-center"
+          title="Close Viewer (Esc)"
+        >
+          <X size={18} />
+        </button>
+
         {/* Header */}
-        <div className="p-4 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between gap-3">
+        <div className="p-4 pr-14 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="p-2 rounded-xl bg-slate-800/90 border border-slate-700">
+            <div className="p-2 rounded-xl bg-slate-800/90 border border-slate-700 shrink-0">
               {getFileIcon()}
             </div>
             <div className="min-w-0">
@@ -84,20 +110,12 @@ export const FileViewerModal: React.FC<FileViewerModalProps> = ({
               </p>
             </div>
           </div>
-
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-            title="Close Viewer"
-          >
-            <X size={20} />
-          </button>
         </div>
 
         {/* Preview Container */}
-        <div className="flex-1 p-4 sm:p-6 overflow-y-auto flex flex-col items-center justify-center bg-slate-950/40">
+        <div className="flex-1 p-4 sm:p-6 overflow-y-auto flex flex-col items-center justify-center bg-slate-950/40 relative min-h-[250px]">
           {isImage ? (
-            <div className="max-h-[380px] flex items-center justify-center overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 p-2 shadow-inner">
+            <div className="relative max-h-[380px] w-full flex items-center justify-center overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 p-2 shadow-inner group">
               <img
                 src={file.fileData}
                 alt={file.fileName}
@@ -135,7 +153,7 @@ export const FileViewerModal: React.FC<FileViewerModalProps> = ({
         </div>
 
         {/* Metadata Details Bar */}
-        <div className="px-6 py-3 bg-slate-950/90 border-t border-slate-800 text-xs grid grid-cols-2 sm:grid-cols-4 gap-3 text-slate-300">
+        <div className="px-6 py-3 bg-slate-950/90 border-t border-slate-800 text-xs grid grid-cols-2 sm:grid-cols-4 gap-3 text-slate-300 shrink-0">
           <div>
             <span className="block text-[10px] uppercase font-mono text-slate-500">Shared By</span>
             <span className="font-semibold text-white truncate block">{file.senderName}</span>
@@ -175,7 +193,7 @@ export const FileViewerModal: React.FC<FileViewerModalProps> = ({
 
         {/* Auto-escalation Badge Banner if large file */}
         {file.escalatedToWifiDirect && (
-          <div className="px-6 py-1.5 bg-emerald-950/60 border-t border-emerald-800/60 flex items-center justify-between text-[11px] text-emerald-300">
+          <div className="px-6 py-1.5 bg-emerald-950/60 border-t border-emerald-800/60 flex items-center justify-between text-[11px] text-emerald-300 shrink-0">
             <span className="flex items-center gap-1.5 font-medium">
               <Radio size={13} className="animate-pulse text-emerald-400" />
               Auto-escalated to Wi-Fi Direct transport (&gt;5MB payload size optimized)
@@ -187,7 +205,7 @@ export const FileViewerModal: React.FC<FileViewerModalProps> = ({
         )}
 
         {/* Actions Footer */}
-        <div className="p-4 bg-slate-900 border-t border-slate-800 flex items-center justify-between gap-3">
+        <div className="p-4 bg-slate-900 border-t border-slate-800 flex items-center justify-between gap-3 shrink-0">
           {onDelete ? (
             <button
               onClick={() => onDelete(file.fileId)}
@@ -202,9 +220,9 @@ export const FileViewerModal: React.FC<FileViewerModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="btn btn-secondary text-xs py-2 px-4"
+              className="btn btn-secondary text-xs py-2 px-4 flex items-center gap-1.5"
             >
-              Close
+              <X size={14} /> Close
             </button>
 
             <button

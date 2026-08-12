@@ -16,6 +16,7 @@ import {
   Smile,
   Info,
   Paperclip,
+  Image as ImageIcon,
   FileText,
   Eye,
   Download,
@@ -47,6 +48,7 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   // 1. Subscribe to live P2P groups list and available peers
   useEffect(() => {
@@ -336,9 +338,26 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
                     >
                       <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
 
-                      {/* Inline Group File Attachment Card */}
+                      {/* Inline Group File Attachment / Image Thumbnail Card */}
                       {msg.fileAttachment && (
-                        <div className="mt-2.5 p-3 rounded-xl bg-slate-950/80 border border-slate-700/90 space-y-2 text-slate-100">
+                        <div className="mt-2.5 p-2.5 rounded-xl bg-slate-950/80 border border-slate-700/90 space-y-2 text-slate-100">
+                          {msg.fileAttachment.fileType.startsWith('image/') ? (
+                            <div
+                              onClick={() => onSelectFile && onSelectFile(msg.fileAttachment!)}
+                              className="cursor-pointer overflow-hidden rounded-lg max-h-52 border border-slate-800 hover:opacity-90 transition relative group bg-slate-900 flex items-center justify-center"
+                              title="Click to view full image"
+                            >
+                              <img
+                                src={msg.fileAttachment.fileData}
+                                alt={msg.fileAttachment.fileName}
+                                className="w-full h-auto max-h-52 object-contain rounded-md"
+                              />
+                              <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-xs font-bold text-white gap-1.5 backdrop-blur-[2px]">
+                                <Eye size={16} /> Click to expand
+                              </div>
+                            </div>
+                          ) : null}
+
                           <div className="flex items-center gap-2.5 min-w-0">
                             <div className="p-2 rounded-lg bg-blue-600/20 text-blue-400 shrink-0">
                               <FileText size={20} />
@@ -359,7 +378,7 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
                               onClick={() => onSelectFile && onSelectFile(msg.fileAttachment!)}
                               className="flex-1 py-1.5 px-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-[11px] font-medium text-white flex items-center justify-center gap-1.5 transition"
                             >
-                              <Eye size={12} /> Preview
+                              <Eye size={12} /> View Full
                             </button>
                             <a
                               href={msg.fileAttachment.fileData}
@@ -407,10 +426,17 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
             </div>
           )}
 
-          {/* Hidden File Input */}
+          {/* Hidden File & Image Inputs */}
           <input
             type="file"
             ref={fileInputRef}
+            onChange={handleGroupFileSelect}
+            className="hidden"
+          />
+          <input
+            type="file"
+            ref={imageInputRef}
+            accept="image/*"
             onChange={handleGroupFileSelect}
             className="hidden"
           />
@@ -420,7 +446,7 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
             <div className="px-4 py-2 bg-blue-950/80 border-t border-blue-800 flex items-center justify-between text-xs text-blue-300 animate-pulse shrink-0">
               <span className="flex items-center gap-2 font-mono">
                 <Loader2 size={14} className="animate-spin text-blue-400" />
-                Distributing file to group members across P2P mesh...
+                Distributing media/file to group members across P2P mesh...
               </span>
               <span className="text-[10px] font-mono text-blue-400 uppercase">FR-6 Engine</span>
             </div>
@@ -429,14 +455,24 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
           {/* Bottom Message Input Bar */}
           <form
             onSubmit={handleSendMessage}
-            className="p-3 bg-slate-900 border-t border-slate-800 flex items-center gap-2 shrink-0"
+            className="p-3 bg-slate-900 border-t border-slate-800 flex items-center gap-2 shrink-0 z-10 relative"
           >
+            <button
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              disabled={isUploading}
+              className="p-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-cyan-400 hover:bg-slate-700 border border-slate-700/80 transition disabled:opacity-50 shrink-0 flex items-center justify-center cursor-pointer"
+              title="Send Image/Photo"
+            >
+              <ImageIcon size={18} />
+            </button>
+
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
-              className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-cyan-400 transition disabled:opacity-50"
-              title="Attach P2P File (Max 25MB)"
+              className="p-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-blue-400 hover:bg-slate-700 border border-slate-700/80 transition disabled:opacity-50 shrink-0 flex items-center justify-center cursor-pointer"
+              title="Attach P2P Document (Max 25MB)"
             >
               <Paperclip size={18} />
             </button>
@@ -444,7 +480,7 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
             <button
               type="button"
               onClick={() => setShowQuickEmojis(!showQuickEmojis)}
-              className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-amber-400 transition"
+              className="p-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-amber-400 hover:bg-slate-700 border border-slate-700/80 transition shrink-0 flex items-center justify-center cursor-pointer"
               title="Quick Emojis"
             >
               <Smile size={18} />
@@ -455,13 +491,13 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
               placeholder={`Message group ${selectedGroup.groupName}...`}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              className="flex-1 py-2.5 px-4 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 shadow-inner"
+              className="flex-1 min-w-[120px] py-2.5 px-4 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 shadow-inner"
             />
 
             <button
               type="submit"
               disabled={!inputText.trim() || isUploading}
-              className="btn btn-primary text-xs py-2 px-4 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn btn-primary text-xs py-2.5 px-4 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
             >
               <Send size={14} /> Send Group
             </button>
