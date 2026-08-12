@@ -72,7 +72,11 @@ export const App: React.FC = () => {
   };
 
   const handleProfileCreated = (newProfile: UserProfile) => {
-    sessionStorage.setItem('fasdm_tab_profile', JSON.stringify(newProfile));
+    try {
+      sessionStorage.setItem('fasdm_tab_profile', JSON.stringify(newProfile));
+    } catch (err) {
+      console.warn('Could not cache profile in sessionStorage:', err);
+    }
     setProfile(newProfile);
     setCurrentView('dashboard');
   };

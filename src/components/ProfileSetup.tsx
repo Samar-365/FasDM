@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import confetti from 'canvas-confetti';
 import { UserProfile } from '../types';
 import { cryptoService } from '../services/crypto';
 import { dbEngine } from '../services/db';
@@ -47,6 +46,30 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileCreated, on
     }
   }, [username]);
 
+  const resizeAvatarImage = (dataUrl: string, targetSize = 200): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = targetSize;
+        canvas.height = targetSize;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(dataUrl);
+
+        // Center crop square math
+        const minDim = Math.min(img.width, img.height);
+        const sx = (img.width - minDim) / 2;
+        const sy = (img.height - minDim) / 2;
+
+        ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, targetSize, targetSize);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -57,9 +80,12 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileCreated, on
     }
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       if (event.target?.result) {
-        setCustomAvatarUrl(event.target.result as string);
+        const rawDataUrl = event.target.result as string;
+        // Resize & center-crop to exact 200x200 square image
+        const squareAvatarUrl = await resizeAvatarImage(rawDataUrl, 200);
+        setCustomAvatarUrl(squareAvatarUrl);
         setError(null);
       }
     };
@@ -89,16 +115,7 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileCreated, on
       };
 
       await dbEngine.saveProfile(profile);
-
-      confetti({
-        particleCount: 60,
-        spread: 60,
-        origin: { y: 0.6 },
-      });
-
-      setTimeout(() => {
-        onProfileCreated(profile);
-      }, 500);
+      onProfileCreated(profile);
     } catch (err) {
       console.error('Failed to save profile:', err);
       setError('Failed to persist profile in local storage.');
@@ -151,75 +168,96 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileCreated, on
             </div>
 
             {/* Avatar Selector */}
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-3">
-                Choose Color Avatar
-              </label>
-              
-              <div className="flex items-center gap-3 mb-4">
-                {PRESET_AVATARS.map((avatar) => (
-                  <button
-                    key={avatar.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedAvatar(avatar.color);
-                      setCustomAvatarUrl(null);
-                    }}
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm transition ${
-                      !customAvatarUrl && selectedAvatar === avatar.color
-                        ? 'ring-2 ring-blue-400 ring-offset-2 ring-offset-slate-900 scale-105'
-                        : 'opacity-70 hover:opacity-100'
-                    }`}
-                    style={{ background: avatar.color }}
-                  >
-                    {username ? username.charAt(0).toUpperCase() : 'N'}
-                  </button>
-                ))}
-              </div>
-
-              {/* Custom Image Upload */}
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-900 border border-slate-700">
-                {customAvatarUrl ? (
-                  <img src={customAvatarUrl} alt="Custom Avatar" className="w-10 h-10 rounded-lg object-cover border border-blue-500/50 shadow" />
-                ) : (
-                  <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 border border-slate-700">
-                    <User size={18} />
-                  </div>
-                )}
-                
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs font-medium text-slate-200 block">
-                    {customAvatarUrl ? 'Custom Avatar Uploaded' : 'Custom Avatar'}
-                  </span>
-                  <span className="text-[11px] text-slate-400 block">
-                    {customAvatarUrl ? 'Remove existing avatar to upload a new one' : 'Max 2MB image'}
-                  </span>
-                </div>
-
-                {customAvatarUrl ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCustomAvatarUrl(null);
-                      if (fileInputRef.current) fileInputRef.current.value = '';
-                    }}
-                    className="btn bg-rose-950/80 text-rose-300 hover:bg-rose-900 border border-rose-800/80 text-xs py-1.5 px-3 flex items-center gap-1.5 shrink-0 transition"
-                    title="Discard uploaded avatar"
-                  >
-                    <Trash2 size={14} /> Remove
-                  </button>
-                ) : (
-                  <label className="btn btn-secondary text-xs py-1.5 px-3 cursor-pointer flex items-center gap-1.5 shrink-0">
-                    <Upload size={14} /> Upload
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileUpload}
-                      style={{ display: 'none' }}
-                    />
+            <div className="space-y-4">
+              {/* Preset Colors (Hidden if custom avatar uploaded) */}
+              {!customAvatarUrl && (
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2.5">
+                    Choose Preset Color Avatar
                   </label>
-                )}
+                  
+                  <div className="flex items-center gap-3">
+                    {PRESET_AVATARS.map((avatar) => (
+                      <button
+                        key={avatar.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedAvatar(avatar.color);
+                          setCustomAvatarUrl(null);
+                        }}
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm transition ${
+                          selectedAvatar === avatar.color
+                            ? 'ring-2 ring-blue-400 ring-offset-2 ring-offset-slate-900 scale-105'
+                            : 'opacity-70 hover:opacity-100'
+                        }`}
+                        style={{ background: avatar.color }}
+                      >
+                        {username ? username.charAt(0).toUpperCase() : 'N'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Custom Image Upload Card */}
+              <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-700/80">
+                <div className="flex items-center justify-between gap-4 min-w-0">
+                  {/* Left: Icon & Text stacked vertically */}
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    {customAvatarUrl ? (
+                      <div className="w-12 h-12 rounded-xl border-2 border-blue-500/60 shadow overflow-hidden shrink-0 aspect-square flex items-center justify-center bg-slate-950">
+                        <img
+                          src={customAvatarUrl}
+                          alt="Custom Avatar"
+                          className="w-full h-full object-cover aspect-square"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 border border-slate-700 shrink-0">
+                        <User size={20} />
+                      </div>
+                    )}
+                    
+                    {!customAvatarUrl && (
+                      <div className="flex flex-col justify-center min-w-0 flex-1">
+                        <p className="text-xs font-bold text-white truncate">
+                          Custom Avatar Upload
+                        </p>
+                        <p className="text-[11px] text-slate-400 mt-0.5 truncate">
+                          Upload PNG or JPG (Max 2MB)
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right: Action Button */}
+                  <div className="shrink-0 min-w-max">
+                    {customAvatarUrl ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomAvatarUrl(null);
+                          if (fileInputRef.current) fileInputRef.current.value = '';
+                        }}
+                        className="px-3.5 py-2 rounded-lg bg-rose-950/90 hover:bg-rose-900 text-rose-300 border border-rose-800 text-xs font-semibold flex items-center gap-1.5 transition shadow cursor-pointer"
+                        title="Remove custom avatar"
+                      >
+                        <Trash2 size={14} /> Remove
+                      </button>
+                    ) : (
+                      <label className="px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow">
+                        <Upload size={14} /> Upload
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileUpload}
+                          style={{ display: 'none' }}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
