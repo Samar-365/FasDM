@@ -1,7 +1,7 @@
-import { UserProfile } from '../types';
+import { UserProfile, PeerDevice, ChatMessage, GroupChat, GroupMessage } from '../types';
 
 const DB_NAME = 'FasDMMeshDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export class LocalStorageEngine {
   private dbPromise: Promise<IDBDatabase> | null = null;
@@ -36,6 +36,18 @@ export class LocalStorageEngine {
           msgStore.createIndex('senderId', 'senderId', { unique: false });
           msgStore.createIndex('receiverId', 'receiverId', { unique: false });
           msgStore.createIndex('timestamp', 'timestamp', { unique: false });
+        }
+
+        // Groups Store
+        if (!db.objectStoreNames.contains('groups')) {
+          db.createObjectStore('groups', { keyPath: 'groupId' });
+        }
+
+        // Group Messages Store
+        if (!db.objectStoreNames.contains('group_messages')) {
+          const gMsgStore = db.createObjectStore('group_messages', { keyPath: 'messageId' });
+          gMsgStore.createIndex('groupId', 'groupId', { unique: false });
+          gMsgStore.createIndex('timestamp', 'timestamp', { unique: false });
         }
       };
 
@@ -174,6 +186,79 @@ export class LocalStorageEngine {
       msgs.forEach((m) => store.delete(m.messageId));
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  // --- Group Operations ---
+  async saveGroup(group: GroupChat): Promise<void> {
+    const db = await this.initDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('groups', 'readwrite');
+      const store = tx.objectStore('groups');
+      const request = store.put(group);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getGroups(): Promise<GroupChat[]> {
+    const db = await this.initDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('groups', 'readonly');
+      const store = tx.objectStore('groups');
+      const request = store.getAll();
+      request.onsuccess = () => resolve((request.result as GroupChat[]) || []);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getGroup(groupId: string): Promise<GroupChat | null> {
+    const db = await this.initDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('groups', 'readonly');
+      const store = tx.objectStore('groups');
+      const request = store.get(groupId);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async deleteGroup(groupId: string): Promise<void> {
+    const db = await this.initDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(['groups', 'group_messages'], 'readwrite');
+      const groupStore = tx.objectStore('groups');
+      groupStore.delete(groupId);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  // --- Group Message Operations ---
+  async saveGroupMessage(message: GroupMessage): Promise<void> {
+    const db = await this.initDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('group_messages', 'readwrite');
+      const store = tx.objectStore('group_messages');
+      const request = store.put(message);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getGroupMessages(groupId: string): Promise<GroupMessage[]> {
+    const db = await this.initDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('group_messages', 'readonly');
+      const store = tx.objectStore('group_messages');
+      const request = store.getAll();
+      request.onsuccess = () => {
+        const allMsgs = (request.result as GroupMessage[]) || [];
+        const filtered = allMsgs.filter((m) => m.groupId === groupId);
+        filtered.sort((a, b) => a.timestamp - b.timestamp);
+        resolve(filtered);
+      };
+      request.onerror = () => reject(request.error);
     });
   }
 

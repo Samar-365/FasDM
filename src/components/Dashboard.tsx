@@ -4,6 +4,7 @@ import { cryptoService } from '../services/crypto';
 import { networkService } from '../services/network';
 import { PeerScanner } from './PeerScanner';
 import { ChatRoom } from './ChatRoom';
+import { GroupChatRoom } from './GroupChatRoom';
 import {
   Shield,
   QrCode,
@@ -105,6 +106,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
                   ({selectedPeerForChat.username.split(' ')[0]})
                 </span>
               )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('groups')}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${activeTab === 'groups'
+                ? 'bg-blue-600 text-white shadow'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
+            >
+              <Users size={14} /> Group Hub
             </button>
           </div>
 
@@ -267,6 +278,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
               </div>
             </div>
           )
+        )}
+
+        {/* TAB 4: GROUP CHAT HUB */}
+        {activeTab === 'groups' && (
+          <GroupChatRoom currentUser={profile} />
         )}
 
       </div>

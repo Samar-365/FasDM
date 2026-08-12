@@ -2,6 +2,8 @@ import {
   UserProfile,
   PeerDevice,
   ChatMessage,
+  GroupChat,
+  GroupMessage,
   NetworkPacket,
   TransportChannel,
   MessageStatus,
@@ -14,11 +16,14 @@ type PeerListener = (peers: PeerDevice[]) => void;
 type MessageListener = (message: ChatMessage) => void;
 type TypingListener = (peerId: string, isTyping: boolean) => void;
 type AckListener = (messageId: string, status: MessageStatus) => void;
+type GroupListener = (groups: GroupChat[]) => void;
+type GroupMessageListener = (groupId: string, message: GroupMessage) => void;
 
 export class P2PNetworkService {
   private broadcastChannel: BroadcastChannel | null = null;
   private currentUser: UserProfile | null = null;
   private discoveredPeers: Map<string, PeerDevice> = new Map();
+  private groups: Map<string, GroupChat> = new Map();
   private beaconInterval: number | null = null;
   private activeChannel: TransportChannel = 'LAN';
 
@@ -26,6 +31,8 @@ export class P2PNetworkService {
   private messageListeners: Set<MessageListener> = new Set();
   private typingListeners: Set<TypingListener> = new Set();
   private ackListeners: Set<AckListener> = new Set();
+  private groupListeners: Set<GroupListener> = new Set();
+  private groupMessageListeners: Set<GroupMessageListener> = new Set();
 
   constructor() {
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
@@ -40,7 +47,7 @@ export class P2PNetworkService {
   async start(user: UserProfile) {
     this.currentUser = user;
     
-    // Load previously saved peers from IndexedDB
+    // Load previously saved peers and groups from IndexedDB
     try {
       const savedPeers = await dbEngine.getAllPeers();
       savedPeers.forEach((p) => {
@@ -48,8 +55,14 @@ export class P2PNetworkService {
         this.discoveredPeers.set(p.deviceId, { ...p, status: 'discovered' });
       });
       this.notifyPeerListeners();
+
+      const savedGroups = await dbEngine.getGroups();
+      savedGroups.forEach((g) => {
+        this.groups.set(g.groupId, g);
+      });
+      this.notifyGroupListeners();
     } catch (err) {
-      console.warn('Failed to load saved peers from DB:', err);
+      console.warn('Failed to load saved peers or groups from DB:', err);
     }
 
     // Start periodic beaconing
@@ -80,6 +93,7 @@ export class P2PNetworkService {
       await dbEngine.saveProfile(this.currentUser);
     }
     this.notifyPeerListeners();
+    this.notifyGroupListeners();
   }
 
   /**
@@ -118,9 +132,25 @@ export class P2PNetworkService {
     return () => this.ackListeners.delete(listener);
   }
 
+  subscribeGroups(listener: GroupListener) {
+    this.groupListeners.add(listener);
+    listener(Array.from(this.groups.values()));
+    return () => this.groupListeners.delete(listener);
+  }
+
+  subscribeGroupMessages(listener: GroupMessageListener) {
+    this.groupMessageListeners.add(listener);
+    return () => this.groupMessageListeners.delete(listener);
+  }
+
   private notifyPeerListeners() {
     const list = Array.from(this.discoveredPeers.values());
     this.peerListeners.forEach((fn) => fn(list));
+  }
+
+  private notifyGroupListeners() {
+    const list = Array.from(this.groups.values());
+    this.groupListeners.forEach((fn) => fn(list));
   }
 
   /**
@@ -211,6 +241,43 @@ export class P2PNetworkService {
           const { messageId, status } = packet.payload;
           await dbEngine.updateMessageStatus(messageId, status);
           this.ackListeners.forEach((fn) => fn(messageId, status));
+        }
+        break;
+
+      case 'GROUP_CREATE':
+        if (packet.payload?.group) {
+          const group: GroupChat = packet.payload.group;
+          this.groups.set(group.groupId, group);
+          await dbEngine.saveGroup(group);
+          this.notifyGroupListeners();
+        }
+        break;
+
+      case 'GROUP_MESSAGE':
+        if (packet.payload?.message) {
+          const gMsg: GroupMessage = packet.payload.message;
+          await dbEngine.saveGroupMessage(gMsg);
+          this.groupMessageListeners.forEach((fn) => fn(gMsg.groupId, gMsg));
+        }
+        break;
+
+      case 'GROUP_MEMBER_LEAVE':
+        if (packet.payload?.groupId && packet.payload?.userId) {
+          const group = this.groups.get(packet.payload.groupId);
+          if (group) {
+            group.members = group.members.filter((m) => m.userId !== packet.payload.userId);
+            await dbEngine.saveGroup(group);
+            this.notifyGroupListeners();
+          }
+        }
+        break;
+
+      case 'GROUP_DELETE':
+        if (packet.payload?.groupId) {
+          const gId = packet.payload.groupId;
+          this.groups.delete(gId);
+          await dbEngine.deleteGroup(gId);
+          this.notifyGroupListeners();
         }
         break;
 
@@ -441,7 +508,204 @@ export class P2PNetworkService {
       this.messageListeners.forEach((fn) => fn(replyMessage));
     }, 3200);
   }
+
+  // =========================================================================
+  // GROUP MESSAGING ENGINE (MODULE 6)
+  // =========================================================================
+
+  /**
+   * Creates a new P2P mesh group and broadcasts creation packet to selected peers
+   */
+  async createGroup(
+    groupName: string,
+    description: string,
+    invitedPeers: PeerDevice[]
+  ): Promise<GroupChat> {
+    if (!this.currentUser) throw new Error('Identity not initialized');
+
+    const groupId = `grp_${crypto.randomUUID()}`;
+    const avatarColors = ['#0284c7', '#7c3aed', '#059669', '#d97706', '#e11d48', '#0284c7'];
+    const avatarColor = avatarColors[Math.floor(Math.random() * avatarColors.length)];
+
+    const members = [
+      {
+        userId: this.currentUser.userId,
+        username: this.currentUser.username,
+        avatar: this.currentUser.avatar,
+        role: 'admin' as const,
+        joinedAt: Date.now(),
+      },
+      ...invitedPeers.map((p) => ({
+        userId: p.deviceId,
+        username: p.username,
+        avatar: p.avatar,
+        role: 'member' as const,
+        joinedAt: Date.now(),
+      })),
+    ];
+
+    const group: GroupChat = {
+      groupId,
+      groupName,
+      description,
+      avatarColor,
+      adminId: this.currentUser.userId,
+      adminName: this.currentUser.username,
+      members,
+      createdAt: Date.now(),
+    };
+
+    this.groups.set(groupId, group);
+    await dbEngine.saveGroup(group);
+    this.notifyGroupListeners();
+
+    // Broadcast creation packet across mesh
+    if (this.broadcastChannel) {
+      const packet: NetworkPacket = {
+        id: crypto.randomUUID(),
+        type: 'GROUP_CREATE',
+        sender: {
+          userId: this.currentUser.userId,
+          username: this.currentUser.username,
+          avatar: this.currentUser.avatar,
+          connectionType: this.activeChannel,
+        },
+        payload: { group },
+        timestamp: Date.now(),
+      };
+      this.broadcastChannel.postMessage(packet);
+    }
+
+    return group;
+  }
+
+  /**
+   * Sends encrypted packet group message to all group member nodes
+   */
+  async sendGroupMessage(groupId: string, content: string): Promise<GroupMessage> {
+    if (!this.currentUser) throw new Error('Identity not initialized');
+
+    const group = this.groups.get(groupId);
+    if (!group) throw new Error('Group not found');
+
+    const messageId = crypto.randomUUID();
+
+    const gMsg: GroupMessage = {
+      messageId,
+      groupId,
+      senderId: this.currentUser.userId,
+      senderName: this.currentUser.username,
+      senderAvatar: this.currentUser.avatar,
+      content,
+      timestamp: Date.now(),
+      channel: this.activeChannel,
+    };
+
+    await dbEngine.saveGroupMessage(gMsg);
+
+    if (this.broadcastChannel) {
+      const packet: NetworkPacket = {
+        id: crypto.randomUUID(),
+        type: 'GROUP_MESSAGE',
+        sender: {
+          userId: this.currentUser.userId,
+          username: this.currentUser.username,
+          avatar: this.currentUser.avatar,
+          connectionType: this.activeChannel,
+        },
+        payload: { message: gMsg },
+        timestamp: Date.now(),
+      };
+      this.broadcastChannel.postMessage(packet);
+    }
+
+    // Trigger simulated peer responses if simulated peers exist in the group
+    const simMembers = group.members.filter((m) => m.userId.startsWith('sim_'));
+    if (simMembers.length > 0) {
+      const randomSimMember = simMembers[Math.floor(Math.random() * simMembers.length)];
+      setTimeout(async () => {
+        const responses = [
+          `Great point! Node active in ${group.groupName}.`,
+          `Received payload across mesh channel. 👍`,
+          `Agreed! FasDM P2P Group Mesh working offline.`,
+          `Standing by for team updates! 🚀`,
+        ];
+        const simReplyText = responses[Math.floor(Math.random() * responses.length)];
+        const replyMsgId = crypto.randomUUID();
+
+        const simReply: GroupMessage = {
+          messageId: replyMsgId,
+          groupId,
+          senderId: randomSimMember.userId,
+          senderName: randomSimMember.username,
+          senderAvatar: randomSimMember.avatar,
+          content: simReplyText,
+          timestamp: Date.now(),
+          channel: this.activeChannel,
+        };
+
+        await dbEngine.saveGroupMessage(simReply);
+        this.groupMessageListeners.forEach((fn) => fn(groupId, simReply));
+      }, 2500);
+    }
+
+    return gMsg;
+  }
+
+  /**
+   * Admin removes member or member leaves group
+   */
+  async removeMemberFromGroup(groupId: string, memberId: string) {
+    const group = this.groups.get(groupId);
+    if (!group) return;
+
+    group.members = group.members.filter((m) => m.userId !== memberId);
+    await dbEngine.saveGroup(group);
+    this.notifyGroupListeners();
+
+    if (this.broadcastChannel && this.currentUser) {
+      const packet: NetworkPacket = {
+        id: crypto.randomUUID(),
+        type: 'GROUP_MEMBER_LEAVE',
+        sender: {
+          userId: this.currentUser.userId,
+          username: this.currentUser.username,
+          avatar: this.currentUser.avatar,
+          connectionType: this.activeChannel,
+        },
+        payload: { groupId, userId: memberId },
+        timestamp: Date.now(),
+      };
+      this.broadcastChannel.postMessage(packet);
+    }
+  }
+
+  /**
+   * Admin deletes a group
+   */
+  async deleteGroup(groupId: string) {
+    this.groups.delete(groupId);
+    await dbEngine.deleteGroup(groupId);
+    this.notifyGroupListeners();
+
+    if (this.broadcastChannel && this.currentUser) {
+      const packet: NetworkPacket = {
+        id: crypto.randomUUID(),
+        type: 'GROUP_DELETE',
+        sender: {
+          userId: this.currentUser.userId,
+          username: this.currentUser.username,
+          avatar: this.currentUser.avatar,
+          connectionType: this.activeChannel,
+        },
+        payload: { groupId },
+        timestamp: Date.now(),
+      };
+      this.broadcastChannel.postMessage(packet);
+    }
+  }
 }
 
 export const networkService = new P2PNetworkService();
+
 
