@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { UserProfile } from '../types';
 import { cryptoService } from '../services/crypto';
@@ -9,6 +9,8 @@ import {
   CheckCircle2,
   Upload,
   RefreshCw,
+  Trash2,
+  X,
 } from 'lucide-react';
 
 interface ProfileSetupProps {
@@ -33,6 +35,7 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileCreated, on
   // UI State
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (username.trim().length >= 3) {
@@ -177,7 +180,7 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileCreated, on
               {/* Custom Image Upload */}
               <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-900 border border-slate-700">
                 {customAvatarUrl ? (
-                  <img src={customAvatarUrl} alt="Avatar" className="w-10 h-10 rounded-lg object-cover" />
+                  <img src={customAvatarUrl} alt="Custom Avatar" className="w-10 h-10 rounded-lg object-cover border border-blue-500/50 shadow" />
                 ) : (
                   <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 border border-slate-700">
                     <User size={18} />
@@ -185,14 +188,38 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileCreated, on
                 )}
                 
                 <div className="flex-1 min-w-0">
-                  <span className="text-xs font-medium text-slate-200 block">Custom Avatar</span>
-                  <span className="text-[11px] text-slate-400 block">Max 2MB image</span>
+                  <span className="text-xs font-medium text-slate-200 block">
+                    {customAvatarUrl ? 'Custom Avatar Uploaded' : 'Custom Avatar'}
+                  </span>
+                  <span className="text-[11px] text-slate-400 block">
+                    {customAvatarUrl ? 'Remove existing avatar to upload a new one' : 'Max 2MB image'}
+                  </span>
                 </div>
 
-                <label className="btn btn-secondary text-xs py-1.5 px-3 cursor-pointer flex items-center gap-1.5 shrink-0">
-                  <Upload size={14} /> Upload
-                  <input type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
-                </label>
+                {customAvatarUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomAvatarUrl(null);
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }}
+                    className="btn bg-rose-950/80 text-rose-300 hover:bg-rose-900 border border-rose-800/80 text-xs py-1.5 px-3 flex items-center gap-1.5 shrink-0 transition"
+                    title="Discard uploaded avatar"
+                  >
+                    <Trash2 size={14} /> Remove
+                  </button>
+                ) : (
+                  <label className="btn btn-secondary text-xs py-1.5 px-3 cursor-pointer flex items-center gap-1.5 shrink-0">
+                    <Upload size={14} /> Upload
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                )}
               </div>
             </div>
 
