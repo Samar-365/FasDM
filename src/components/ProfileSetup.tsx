@@ -189,9 +189,9 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileCreated, on
                   <span className="text-[11px] text-slate-400 block">Max 2MB image</span>
                 </div>
 
-                <label className="btn btn-secondary text-xs py-1.5 px-3 cursor-pointer">
+                <label className="btn btn-secondary text-xs py-1.5 px-3 cursor-pointer flex items-center gap-1.5 shrink-0">
                   <Upload size={14} /> Upload
-                  <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+                  <input type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
                 </label>
               </div>
             </div>
