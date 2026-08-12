@@ -272,21 +272,20 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser }) => 
                     key={msg.messageId}
                     className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} fade-in-up`}
                   >
-                    {!isMe && (
-                      <div className="flex items-center gap-1.5 mb-1 px-1">
-                        <div
-                          className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[9px] font-bold"
-                          style={{
-                            background: msg.senderAvatar.startsWith('#') ? msg.senderAvatar : '#0284c7',
-                          }}
-                        >
-                          {msg.senderName.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="text-[11px] font-semibold text-cyan-400">
-                          {msg.senderName}
-                        </span>
+                    {/* Sender Name & Avatar above every message */}
+                    <div className={`flex items-center gap-1.5 mb-1 px-1 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                      <div
+                        className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[9px] font-bold shrink-0"
+                        style={{
+                          background: msg.senderAvatar.startsWith('#') ? msg.senderAvatar : (isMe ? '#2563eb' : '#0284c7'),
+                        }}
+                      >
+                        {(msg.senderName || 'U').charAt(0).toUpperCase()}
                       </div>
-                    )}
+                      <span className={`text-[11px] font-semibold ${isMe ? 'text-blue-400' : 'text-cyan-400'}`}>
+                        {isMe ? `${msg.senderName} (You)` : msg.senderName}
+                      </span>
+                    </div>
 
                     <div
                       className={`max-w-[80%] rounded-2xl px-4 py-2.5 space-y-1 shadow-md text-xs sm:text-sm ${
