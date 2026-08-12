@@ -39,7 +39,6 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimerRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
 
   // Load chat history & subscribe to live P2P network events
   useEffect(() => {
@@ -407,19 +406,12 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
         </div>
       )}
 
-      {/* Hidden File & Image Inputs */}
+      {/* Hidden File Input */}
       <input
         type="file"
         ref={fileInputRef}
         onChange={handleFileSelect}
-        className="hidden"
-      />
-      <input
-        type="file"
-        ref={imageInputRef}
-        accept="image/*"
-        onChange={handleFileSelect}
-        className="hidden"
+        style={{ display: 'none' }}
       />
 
       {/* Uploading File Bar */}
@@ -440,20 +432,10 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
       >
         <button
           type="button"
-          onClick={() => imageInputRef.current?.click()}
-          disabled={isUploading}
-          className="p-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-cyan-400 hover:bg-slate-700 border border-slate-700/80 transition disabled:opacity-50 shrink-0 flex items-center justify-center cursor-pointer"
-          title="Send Image/Photo"
-        >
-          <ImageIcon size={18} />
-        </button>
-
-        <button
-          type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
-          className="p-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-blue-400 hover:bg-slate-700 border border-slate-700/80 transition disabled:opacity-50 shrink-0 flex items-center justify-center cursor-pointer"
-          title="Attach P2P Document (Max 25MB)"
+          className="p-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-cyan-400 hover:bg-slate-700 border border-slate-700/80 transition disabled:opacity-50 shrink-0 flex items-center justify-center cursor-pointer"
+          title="Attach Image or File (Max 25MB)"
         >
           <Paperclip size={18} />
         </button>
