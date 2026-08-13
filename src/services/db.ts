@@ -168,6 +168,22 @@ export class LocalStorageEngine {
     });
   }
 
+  async getUnreadSenders(myId: string): Promise<string[]> {
+    const db = await this.initDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('messages', 'readonly');
+      const store = tx.objectStore('messages');
+      const request = store.getAll();
+      request.onsuccess = () => {
+        const allMsgs = (request.result as ChatMessage[]) || [];
+        const unreadMsgs = allMsgs.filter((m) => m.receiverId === myId && m.status !== 'read');
+        const senders = Array.from(new Set(unreadMsgs.map((m) => m.senderId)));
+        resolve(senders);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
   async updateMessageStatus(messageId: string, status: MessageStatus): Promise<void> {
     const db = await this.initDB();
     return new Promise((resolve, reject) => {

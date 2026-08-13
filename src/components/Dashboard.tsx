@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { UserProfile, PeerDevice, DashboardTab, SharedFile } from '../types';
 import { cryptoService } from '../services/crypto';
 import { networkService } from '../services/network';
@@ -15,7 +15,8 @@ import {
   MessageSquare,
   LayoutDashboard,
   ArrowRight,
-  FileText
+  FileText,
+  Bell
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -29,13 +30,43 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
   const [discoveredPeersCount, setDiscoveredPeersCount] = useState(0);
   const [sharedFilesCount, setSharedFilesCount] = useState(0);
   const [selectedFileForViewer, setSelectedFileForViewer] = useState<SharedFile | null>(null);
+  const [unreadPeerIds, setUnreadPeerIds] = useState<Set<string>>(new Set());
 
   const [showQRModal, setShowQRModal] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
 
+  // Refs for tracking active view state inside long-lived event listeners without stale closures
+  const activeTabRef = useRef(activeTab);
+  const selectedPeerRef = useRef(selectedPeerForChat);
+
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+    selectedPeerRef.current = selectedPeerForChat;
+  }, [activeTab, selectedPeerForChat]);
+
+  // Immediately clear unread notification highlight whenever the chatroom for that peer is opened/active
+  useEffect(() => {
+    if (activeTab === 'chat' && selectedPeerForChat) {
+      const peerId = selectedPeerForChat.deviceId;
+      setUnreadPeerIds((prev) => {
+        if (!prev.has(peerId)) return prev;
+        const next = new Set(prev);
+        next.delete(peerId);
+        return next;
+      });
+    }
+  }, [activeTab, selectedPeerForChat]);
+
   // Initialize P2P Network Service & Counters
   useEffect(() => {
     networkService.start(profile);
+
+    // Load initial unread message senders from DB
+    dbEngine.getUnreadSenders(profile.userId).then((senders) => {
+      if (senders.length > 0) {
+        setUnreadPeerIds(new Set(senders));
+      }
+    }).catch(console.warn);
 
     const unsubPeers = networkService.subscribePeers((peers) => {
       setDiscoveredPeersCount(peers.length);
@@ -45,11 +76,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
       loadFilesCount();
     });
 
+    // Listen to real-time incoming messages to trigger unread notifications if chatroom is not active
+    const unsubMessages = networkService.subscribeMessages((msg) => {
+      if (msg.receiverId === profile.userId && msg.senderId !== profile.userId) {
+        setUnreadPeerIds((prev) => {
+          // If currently actively chatting with this peer on chat tab, ignore
+          const isCurrentlyChatting =
+            activeTabRef.current === 'chat' && selectedPeerRef.current?.deviceId === msg.senderId;
+          if (isCurrentlyChatting) return prev;
+          return new Set(prev).add(msg.senderId);
+        });
+      }
+    });
+
     loadFilesCount();
 
     return () => {
       unsubPeers();
       unsubFiles();
+      unsubMessages();
       networkService.stop();
     };
   }, [profile]);
@@ -80,6 +125,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
   const handleSelectPeerForChat = (peer: PeerDevice) => {
     setSelectedPeerForChat(peer);
     setActiveTab('chat');
+    // Clear unread notification for this peer right after chatroom is opened
+    setUnreadPeerIds((prev) => {
+      const next = new Set(prev);
+      next.delete(peer.deviceId);
+      return next;
+    });
   };
 
   return (
@@ -107,15 +158,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
                 }`}
             >
               <Users size={14} /> Nearby Devices
-              {discoveredPeersCount > 0 && (
+              {unreadPeerIds.size > 0 ? (
+                <span className="ml-1 px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-bold animate-pulse shadow-md flex items-center gap-1">
+                  <Bell size={10} className="animate-spin" /> {unreadPeerIds.size} New
+                </span>
+              ) : discoveredPeersCount > 0 ? (
                 <span className="ml-1 px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-[10px] border border-cyan-500/30">
                   {discoveredPeersCount}
                 </span>
-              )}
+              ) : null}
             </button>
 
             <button
-              onClick={() => setActiveTab('chat')}
+              onClick={() => {
+                setActiveTab('chat');
+                if (selectedPeerForChat) {
+                  setUnreadPeerIds((prev) => {
+                    const next = new Set(prev);
+                    next.delete(selectedPeerForChat.deviceId);
+                    return next;
+                  });
+                }
+              }}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${activeTab === 'chat'
                 ? 'bg-blue-600 text-white shadow'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
@@ -126,6 +190,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
                 <span className="text-[10px] text-blue-300 truncate max-w-[90px]">
                   ({selectedPeerForChat.username.split(' ')[0]})
                 </span>
+              )}
+              {unreadPeerIds.size > 0 && activeTab !== 'chat' && (
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping inline-block" />
               )}
             </button>
 
@@ -269,7 +336,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
 
         {/* TAB 2: PEER SCANNER */}
         {activeTab === 'peers' && (
-          <PeerScanner onSelectPeerForChat={handleSelectPeerForChat} />
+          <PeerScanner
+            onSelectPeerForChat={handleSelectPeerForChat}
+            unreadPeerIds={unreadPeerIds}
+          />
         )}
 
         {/* TAB 3: DIRECT CHAT */}

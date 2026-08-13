@@ -10,14 +10,16 @@ import {
   Search,
   Cpu,
   RefreshCw,
-  SignalHigh
+  SignalHigh,
+  Bell
 } from 'lucide-react';
 
 interface PeerScannerProps {
   onSelectPeerForChat: (peer: PeerDevice) => void;
+  unreadPeerIds?: Set<string>;
 }
 
-export const PeerScanner: React.FC<PeerScannerProps> = ({ onSelectPeerForChat }) => {
+export const PeerScanner: React.FC<PeerScannerProps> = ({ onSelectPeerForChat, unreadPeerIds }) => {
   const [peers, setPeers] = useState<PeerDevice[]>([]);
   const [activeTab, setActiveTab] = useState<'All' | TransportChannel>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -211,83 +213,102 @@ export const PeerScanner: React.FC<PeerScannerProps> = ({ onSelectPeerForChat })
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredPeers.map((peer) => (
-            <div
-              key={peer.deviceId}
-              className="glass-panel p-4 flex flex-col justify-between space-y-4 hover:border-slate-600 transition group"
-            >
-              <div className="space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-base shrink-0 shadow-md"
-                      style={{
-                        background: peer.avatar.startsWith('http') || peer.avatar.startsWith('data:') ? undefined : peer.avatar,
-                      }}
-                    >
-                      {peer.avatar.startsWith('http') || peer.avatar.startsWith('data:') ? (
-                        <img src={peer.avatar} alt={peer.username} className="w-full h-full rounded-xl object-cover" />
-                      ) : (
-                        peer.username.charAt(0).toUpperCase()
-                      )}
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-white group-hover:text-blue-400 transition truncate max-w-[140px]">
-                        {peer.username}
-                      </h4>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span
-                          className={`w-2 h-2 rounded-full ${peer.status === 'connected' ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'
-                            }`}
-                        />
-                        <span className="text-[11px] text-slate-400 font-mono">
-                          {peer.status === 'connected' ? 'Online' : 'Discovered'}
-                        </span>
+          {filteredPeers.map((peer) => {
+            const hasUnread = unreadPeerIds?.has(peer.deviceId);
+            return (
+              <div
+                key={peer.deviceId}
+                className={`glass-panel p-4 flex flex-col justify-between space-y-4 transition group relative ${
+                  hasUnread
+                    ? 'border-2 border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.4)] animate-pulse'
+                    : 'hover:border-slate-600'
+                }`}
+              >
+                {/* Notification Badge if unread message exists */}
+                {hasUnread && (
+                  <div className="absolute -top-3 left-4 bg-rose-600 text-white font-bold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-lg z-10 animate-bounce border border-rose-400">
+                    <Bell size={11} className="animate-spin" /> Unread Message!
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-base shrink-0 shadow-md"
+                        style={{
+                          background: peer.avatar.startsWith('http') || peer.avatar.startsWith('data:') ? undefined : peer.avatar,
+                        }}
+                      >
+                        {peer.avatar.startsWith('http') || peer.avatar.startsWith('data:') ? (
+                          <img src={peer.avatar} alt={peer.username} className="w-full h-full rounded-xl object-cover" />
+                        ) : (
+                          peer.username.charAt(0).toUpperCase()
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-white group-hover:text-blue-400 transition truncate max-w-[140px]">
+                          {peer.username}
+                        </h4>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span
+                            className={`w-2 h-2 rounded-full ${peer.status === 'connected' ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'
+                              }`}
+                          />
+                          <span className="text-[11px] text-slate-400 font-mono">
+                            {peer.status === 'connected' ? 'Online' : 'Discovered'}
+                          </span>
+                        </div>
                       </div>
                     </div>
+
+                    {/* Channel Tag */}
+                    <span
+                      className={`badge text-[10px] ${peer.connectionType === 'LAN'
+                          ? 'badge-emerald'
+                          : peer.connectionType === 'Wi-Fi Direct'
+                            ? 'badge-cyan'
+                            : 'badge-purple'
+                        }`}
+                    >
+                      {peer.connectionType === 'LAN' ? (
+                        <Wifi size={10} className="inline mr-1" />
+                      ) : peer.connectionType === 'Wi-Fi Direct' ? (
+                        <Radio size={10} className="inline mr-1" />
+                      ) : (
+                        <Bluetooth size={10} className="inline mr-1" />
+                      )}
+                      {peer.connectionType}
+                    </span>
                   </div>
 
-                  {/* Channel Tag */}
-                  <span
-                    className={`badge text-[10px] ${peer.connectionType === 'LAN'
-                        ? 'badge-emerald'
-                        : peer.connectionType === 'Wi-Fi Direct'
-                          ? 'badge-cyan'
-                          : 'badge-purple'
-                      }`}
+                  {/* Signal & Latency Stats */}
+                  <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 font-mono text-[11px] flex justify-between text-slate-400">
+                    <span className="flex items-center gap-1">
+                      <SignalHigh size={10} className="text-slate-400" /> Signal & Latency
+                    </span>
+                    <span className="text-slate-300">
+                      {peer.rssi} dBm ({peer.latencyMs || 10} ms)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-800 flex items-center gap-2">
+                  <button
+                    onClick={() => onSelectPeerForChat(peer)}
+                    className={`w-full text-xs py-2 flex items-center justify-center gap-1.5 font-bold transition ${
+                      hasUnread
+                        ? 'btn bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-950/60 animate-pulse'
+                        : 'btn btn-primary'
+                    }`}
                   >
-                    {peer.connectionType === 'LAN' ? (
-                      <Wifi size={10} className="inline mr-1" />
-                    ) : peer.connectionType === 'Wi-Fi Direct' ? (
-                      <Radio size={10} className="inline mr-1" />
-                    ) : (
-                      <Bluetooth size={10} className="inline mr-1" />
-                    )}
-                    {peer.connectionType}
-                  </span>
-                </div>
-
-                {/* Signal & Latency Stats */}
-                <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 font-mono text-[11px] flex justify-between text-slate-400">
-                  <span className="flex items-center gap-1">
-                    <SignalHigh size={10} className="text-slate-400" /> Signal & Latency
-                  </span>
-                  <span className="text-slate-300">
-                    {peer.rssi} dBm ({peer.latencyMs || 10} ms)
-                  </span>
+                    {hasUnread ? <Bell size={14} className="animate-bounce" /> : <MessageSquare size={14} />}
+                    {hasUnread ? '● Unread Message — Start P2P Chat' : 'Start P2P Chat'}
+                  </button>
                 </div>
               </div>
-
-              <div className="pt-2 border-t border-slate-800 flex items-center gap-2">
-                <button
-                  onClick={() => onSelectPeerForChat(peer)}
-                  className="btn btn-primary w-full text-xs py-2 flex items-center justify-center gap-1.5"
-                >
-                  <MessageSquare size={14} /> Start P2P Chat
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
