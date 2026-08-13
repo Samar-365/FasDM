@@ -47,15 +47,9 @@ export const App: React.FC = () => {
           return;
         }
 
-        // Otherwise check IndexedDB
-        const savedProfile = await dbEngine.getProfile();
-        if (savedProfile) {
-          sessionStorage.setItem('fasdm_tab_profile', JSON.stringify(savedProfile));
-          setProfile(savedProfile);
-          setCurrentView('dashboard');
-        } else {
-          setCurrentView('splash');
-        }
+        // Fresh new tab without session -> start directly on the first page (splash screen)
+        setProfile(null);
+        setCurrentView('splash');
       } catch (err) {
         console.error('Error loading tab profile:', err);
         setCurrentView('splash');
