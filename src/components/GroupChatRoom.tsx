@@ -35,7 +35,7 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
   const [inputText, setInputText] = useState('');
   const [availablePeers, setAvailablePeers] = useState<PeerDevice[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  
+
   // Modals state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
@@ -329,71 +329,98 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
                     </div>
 
                     <div
-                      className={`max-w-[80%] rounded-2xl px-4 py-2.5 space-y-1 shadow-md text-xs sm:text-sm ${
-                        isMe
-                          ? 'bg-blue-600 text-white rounded-br-none'
-                          : 'bg-slate-800 text-slate-100 border border-slate-700/70 rounded-bl-none'
-                      }`}
+                      className={`max-w-[80%] rounded-2xl px-4 py-2.5 space-y-1 shadow-md text-xs sm:text-sm ${isMe
+                        ? 'bg-blue-600 text-white rounded-br-none'
+                        : 'bg-slate-800 text-slate-100 border border-slate-700/70 rounded-bl-none'
+                        }`}
                     >
                       <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
 
-                      {/* Inline Group File Attachment / Image Thumbnail Card */}
+                      {/* Inline Group File Attachment / Image Thumbnail Card (Compact 140px max width) */}
                       {msg.fileAttachment && (
-                        <div className="mt-2.5 p-2.5 rounded-xl bg-slate-950/80 border border-slate-700/90 space-y-2 text-slate-100">
+                        <div className="mt-2 p-1.5 rounded-xl bg-slate-950/85 border border-slate-700/80 space-y-1.5 text-slate-100 w-36 max-w-[140px] shrink-0 shadow-sm">
                           {msg.fileAttachment.fileType.startsWith('image/') ? (
                             <div
                               onClick={() => onSelectFile && onSelectFile(msg.fileAttachment!)}
-                              className="cursor-pointer overflow-hidden rounded-lg max-h-52 border border-slate-800 hover:opacity-90 transition relative group bg-slate-900 flex items-center justify-center"
-                              title="Click to view full image"
+                              className="cursor-pointer overflow-hidden rounded-lg aspect-[4/3] w-full max-h-24 border border-slate-800 hover:opacity-90 transition relative group bg-slate-900 flex items-center justify-center"
+                              style={{ aspectRatio: '4 / 3' }}
+                              title={`Click to view ${msg.fileAttachment.fileName}`}
                             >
                               <img
                                 src={msg.fileAttachment.fileData}
                                 alt={msg.fileAttachment.fileName}
-                                className="w-full h-auto max-h-52 object-contain rounded-md"
+                                className="max-h-full max-w-full object-contain rounded-md"
                               />
-                              <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-xs font-bold text-white gap-1.5 backdrop-blur-[2px]">
-                                <Eye size={16} /> Click to expand
+                              <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-[10px] font-bold text-white gap-1 backdrop-blur-[1px]">
+                                <Eye size={13} /> View
                               </div>
                             </div>
-                          ) : null}
-
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="p-2 rounded-lg bg-blue-600/20 text-blue-400 shrink-0">
-                              <FileText size={20} />
+                          ) : msg.fileAttachment.fileType.startsWith('video/') ? (
+                            <div
+                              onClick={() => onSelectFile && onSelectFile(msg.fileAttachment!)}
+                              className="cursor-pointer overflow-hidden rounded-lg aspect-[4/3] w-full max-h-24 border border-slate-800 hover:opacity-90 transition relative group bg-slate-900 flex items-center justify-center"
+                              style={{ aspectRatio: '4 / 3' }}
+                              title={`Click to play ${msg.fileAttachment.fileName}`}
+                            >
+                              <video
+                                src={msg.fileAttachment.fileData}
+                                className="w-full h-full object-cover rounded-md pointer-events-none"
+                              />
+                              <div className="absolute inset-0 bg-slate-950/50 opacity-90 group-hover:opacity-100 transition flex items-center justify-center text-[10px] font-bold text-white gap-1 backdrop-blur-[1px]">
+                                <Eye size={13} /> Play
+                              </div>
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-bold text-white truncate" title={msg.fileAttachment.fileName}>
+                          ) : (
+                            <div
+                              onClick={() => onSelectFile && onSelectFile(msg.fileAttachment!)}
+                              className="cursor-pointer overflow-hidden rounded-lg aspect-[4/3] w-full max-h-24 border border-slate-800/80 bg-slate-900/90 hover:bg-slate-800 transition flex flex-col items-center justify-center p-1.5 text-center space-y-1 relative group"
+                              style={{ aspectRatio: '4 / 3' }}
+                              title={`View ${msg.fileAttachment.fileName}`}
+                            >
+                              <div className="p-1.5 rounded-lg bg-blue-600/20 text-blue-400">
+                                <FileText size={18} />
+                              </div>
+                              <p className="text-[10px] font-bold text-white truncate w-full px-0.5">
                                 {msg.fileAttachment.fileName}
                               </p>
-                              <p className="text-[10px] font-mono text-slate-400">
-                                {(msg.fileAttachment.fileSize / (1024 * 1024)).toFixed(2)} MB • {msg.fileAttachment.channel}
-                                {msg.fileAttachment.escalatedToWifiDirect && ' (⚡ Wi-Fi Direct)'}
+                            </div>
+                          )}
+
+                          {/* Details & Actions */}
+                          <div className="space-y-1 min-w-0">
+                            <div className="min-w-0">
+                              <p className="text-[11px] font-bold text-white truncate" title={msg.fileAttachment.fileName}>
+                                {msg.fileAttachment.fileName}
+                              </p>
+                              <p className="text-[9px] font-mono text-slate-400 truncate">
+                                {(msg.fileAttachment.fileSize / (1024 * 1024)).toFixed(1)} MB
                               </p>
                             </div>
-                          </div>
 
-                          <div className="flex items-center gap-2 pt-1.5 border-t border-slate-800">
-                            <button
-                              onClick={() => onSelectFile && onSelectFile(msg.fileAttachment!)}
-                              className="flex-1 py-1.5 px-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-[11px] font-medium text-white flex items-center justify-center gap-1.5 transition"
-                            >
-                              <Eye size={12} /> View Full
-                            </button>
-                            <a
-                              href={msg.fileAttachment.fileData}
-                              download={msg.fileAttachment.fileName}
-                              className="py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-medium text-slate-200 flex items-center justify-center gap-1.5 transition"
-                            >
-                              <Download size={12} /> Download
-                            </a>
+                            <div className="flex items-center gap-1 pt-1 border-t border-slate-800">
+                              <button
+                                onClick={() => onSelectFile && onSelectFile(msg.fileAttachment!)}
+                                className="flex-1 py-1 px-1.5 rounded bg-blue-600 hover:bg-blue-500 text-[10px] font-medium text-white flex items-center justify-center gap-1 transition"
+                                title="View Full"
+                              >
+                                <Eye size={10} /> View
+                              </button>
+                              <a
+                                href={msg.fileAttachment.fileData}
+                                download={msg.fileAttachment.fileName}
+                                className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center transition shrink-0"
+                                title="Download"
+                              >
+                                <Download size={10} />
+                              </a>
+                            </div>
                           </div>
                         </div>
                       )}
 
                       <div
-                        className={`flex items-center justify-end gap-1 text-[10px] font-mono ${
-                          isMe ? 'text-blue-200' : 'text-slate-400'
-                        }`}
+                        className={`flex items-center justify-end gap-1 text-[10px] font-mono ${isMe ? 'text-blue-200' : 'text-slate-400'
+                          }`}
                       >
                         <span>
                           {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -612,11 +639,10 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
                         <div
                           key={peer.deviceId}
                           onClick={() => togglePeerSelection(peer.deviceId)}
-                          className={`p-2 rounded-lg border text-xs flex items-center justify-between cursor-pointer transition ${
-                            isSelected
-                              ? 'bg-blue-950/70 border-blue-500 text-white'
-                              : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700'
-                          }`}
+                          className={`p-2 rounded-lg border text-xs flex items-center justify-between cursor-pointer transition ${isSelected
+                            ? 'bg-blue-950/70 border-blue-500 text-white'
+                            : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700'
+                            }`}
                         >
                           <div className="flex items-center gap-2 truncate">
                             <span

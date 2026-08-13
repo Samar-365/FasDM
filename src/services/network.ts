@@ -49,7 +49,7 @@ export class P2PNetworkService {
    */
   async start(user: UserProfile) {
     this.currentUser = user;
-    
+
     // Load previously saved peers and groups from IndexedDB
     try {
       const savedPeers = await dbEngine.getAllPeers();

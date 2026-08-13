@@ -79,160 +79,128 @@ export const FileViewerModal: React.FC<FileViewerModalProps> = ({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md fade-in cursor-pointer"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+        background: 'rgba(2, 6, 23, 0.92)',
+        backdropFilter: 'blur(8px)',
+        cursor: 'pointer',
+        overflowY: 'auto',
+      }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="glass-panel w-full max-w-2xl bg-slate-900/95 border border-slate-700/80 rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] relative cursor-default"
+        style={{
+          width: '900px',
+          maxWidth: '90vw',
+          maxHeight: '85vh',
+          background: '#0f172a',
+          border: '1px solid #334155',
+          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.8)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          cursor: 'default',
+          margin: 'auto',
+        }}
       >
-        
-        {/* Top Floating Close Icon for extra visibility */}
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 z-30 p-2 rounded-full bg-slate-950/90 text-slate-300 hover:text-white hover:bg-rose-600 border border-slate-700 transition shadow-xl flex items-center justify-center"
-          title="Close Viewer (Esc)"
-        >
-          <X size={18} />
-        </button>
-
         {/* Header */}
-        <div className="p-4 pr-14 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="p-2 rounded-xl bg-slate-800/90 border border-slate-700 shrink-0">
+        <div
+          style={{
+            padding: '8px 12px',
+            background: '#020617',
+            borderBottom: '1px solid #1e293b',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '8px',
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '4px', background: '#1e293b', border: '1px solid #334155', flexShrink: 0 }}>
               {getFileIcon()}
             </div>
-            <div className="min-w-0">
-              <h3 className="text-sm font-bold text-white truncate" title={file.fileName}>
+            <div style={{ minWidth: 0, overflow: 'hidden' }}>
+              <h3 style={{ fontSize: '12px', fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0 }} title={file.fileName}>
                 {file.fileName}
               </h3>
-              <p className="text-xs font-mono text-slate-400">
-                {formatFileSize(file.fileSize)} • {file.fileType || 'Binary File'}
+              <p style={{ fontSize: '10px', fontFamily: 'monospace', color: '#94a3b8', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {formatFileSize(file.fileSize)} • {file.senderName} ({file.channel})
               </p>
             </div>
           </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+            <button
+              onClick={handleDownload}
+              style={{ padding: '4px 10px', background: '#2563eb', color: '#fff', border: 'none', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+              title="Download File"
+            >
+              <Download size={11} /> Download
+            </button>
+            <button
+              onClick={onClose}
+              style={{ padding: '4px', background: '#1e293b', color: '#cbd5e1', border: '1px solid #334155', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              title="Close (Esc)"
+            >
+              <X size={13} />
+            </button>
+          </div>
         </div>
 
-        {/* Preview Container */}
-        <div className="flex-1 p-4 sm:p-6 overflow-y-auto flex flex-col items-center justify-center bg-slate-950/40 relative min-h-[250px]">
+        {/* Preview Body */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#020617',
+            minHeight: 0,
+          }}
+        >
           {isImage ? (
-            <div className="relative max-h-[380px] w-full flex items-center justify-center overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 p-2 shadow-inner group">
+            <div style={{ width: '100%', maxHeight: '480px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '1px solid #1e293b', background: '#0f172a', padding: '8px' }}>
               <img
                 src={file.fileData}
                 alt={file.fileName}
-                className="max-h-[360px] w-auto max-w-full object-contain rounded-lg shadow-lg"
+                style={{ maxHeight: '460px', maxWidth: '100%', objectFit: 'contain' }}
               />
             </div>
           ) : isVideo ? (
-            <div className="w-full max-w-lg rounded-xl overflow-hidden border border-slate-800 bg-slate-950 shadow-lg">
-              <video controls src={file.fileData} className="w-full max-h-[360px]" />
+            <div style={{ width: '100%', overflow: 'hidden', border: '1px solid #1e293b', background: '#020617' }}>
+              <video controls src={file.fileData} style={{ width: '100%', maxHeight: '460px' }} />
             </div>
           ) : isAudio ? (
-            <div className="w-full max-w-md p-6 rounded-2xl bg-slate-900 border border-slate-800 text-center space-y-4 shadow-lg">
-              <div className="w-16 h-16 mx-auto rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                <FileText size={32} />
+            <div style={{ width: '100%', padding: '12px', background: '#0f172a', border: '1px solid #1e293b', textAlign: 'center' }}>
+              <div style={{ width: '32px', height: '32px', margin: '0 auto 8px', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fbbf24' }}>
+                <FileText size={16} />
               </div>
-              <audio controls src={file.fileData} className="w-full" />
+              <audio controls src={file.fileData} style={{ width: '100%', height: '28px' }} />
             </div>
           ) : isPdf ? (
-            <div className="w-full h-[360px] rounded-xl overflow-hidden border border-slate-800 bg-slate-900">
-              <iframe src={file.fileData} title={file.fileName} className="w-full h-full border-none" />
+            <div style={{ width: '100%', height: '450px', overflow: 'hidden', border: '1px solid #1e293b', background: '#0f172a' }}>
+              <iframe src={file.fileData} title={file.fileName} style={{ width: '100%', height: '100%', border: 'none' }} />
             </div>
           ) : (
-            <div className="w-full max-w-md p-8 rounded-2xl bg-slate-900/90 border border-slate-800 text-center space-y-4 shadow-lg">
-              <div className="w-16 h-16 mx-auto rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
+            <div style={{ width: '100%', padding: '16px', background: '#0f172a', border: '1px solid #1e293b', textAlign: 'center' }}>
+              <div style={{ width: '32px', height: '32px', margin: '0 auto 6px', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#60a5fa' }}>
                 {getFileIcon()}
               </div>
-              <div>
-                <h4 className="text-base font-bold text-white">{file.fileName}</h4>
-                <p className="text-xs font-mono text-slate-400 mt-1">
-                  Ready for direct offline P2P download
-                </p>
-              </div>
+              <p style={{ fontSize: '12px', fontWeight: 700, color: '#fff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.fileName}</p>
+              <p style={{ fontSize: '10px', fontFamily: 'monospace', color: '#94a3b8', margin: '4px 0 0' }}>Ready for P2P download</p>
             </div>
           )}
         </div>
 
-        {/* Metadata Details Bar */}
-        <div className="px-6 py-3 bg-slate-950/90 border-t border-slate-800 text-xs grid grid-cols-2 sm:grid-cols-4 gap-3 text-slate-300 shrink-0">
-          <div>
-            <span className="block text-[10px] uppercase font-mono text-slate-500">Shared By</span>
-            <span className="font-semibold text-white truncate block">{file.senderName}</span>
-          </div>
-
-          <div>
-            <span className="block text-[10px] uppercase font-mono text-slate-500">Transport Channel</span>
-            <div className="flex items-center gap-1 font-semibold text-blue-400">
-              {file.channel === 'LAN' ? (
-                <Wifi size={12} />
-              ) : file.channel === 'Wi-Fi Direct' ? (
-                <Radio size={12} className="text-emerald-400" />
-              ) : (
-                <Bluetooth size={12} />
-              )}
-              <span className={file.escalatedToWifiDirect ? 'text-emerald-400 font-bold' : ''}>
-                {file.channel}
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <span className="block text-[10px] uppercase font-mono text-slate-500">Timestamp</span>
-            <span className="font-mono text-slate-300">
-              {new Date(file.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </span>
-          </div>
-
-          <div>
-            <span className="block text-[10px] uppercase font-mono text-slate-500">Fingerprint ID</span>
-            <div className="flex items-center gap-1 font-mono text-slate-400">
-              <ShieldCheck size={12} className="text-cyan-400 shrink-0" />
-              <span className="truncate">{file.fileId.slice(0, 12)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Auto-escalation Badge Banner if large file */}
-        {file.escalatedToWifiDirect && (
-          <div className="px-6 py-1.5 bg-emerald-950/60 border-t border-emerald-800/60 flex items-center justify-between text-[11px] text-emerald-300 shrink-0">
-            <span className="flex items-center gap-1.5 font-medium">
-              <Radio size={13} className="animate-pulse text-emerald-400" />
-              Auto-escalated to Wi-Fi Direct transport (&gt;5MB payload size optimized)
-            </span>
-            <span className="font-mono text-[10px] uppercase bg-emerald-900/80 px-2 py-0.5 rounded border border-emerald-700">
-              FR-6 Compliant
-            </span>
-          </div>
-        )}
-
-        {/* Actions Footer */}
-        <div className="p-4 bg-slate-900 border-t border-slate-800 flex items-center justify-between gap-3 shrink-0">
-          {onDelete ? (
-            <button
-              onClick={() => onDelete(file.fileId)}
-              className="btn bg-rose-950/80 text-rose-300 hover:bg-rose-900 border border-rose-800 text-xs py-2 px-3 flex items-center gap-1.5"
-            >
-              <Trash2 size={14} /> Delete
-            </button>
-          ) : (
-            <div />
-          )}
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onClose}
-              className="btn btn-secondary text-xs py-2 px-4 flex items-center gap-1.5"
-            >
-              <X size={14} /> Close
-            </button>
-
-            <button
-              onClick={handleDownload}
-              className="btn btn-primary text-xs py-2 px-5 flex items-center gap-2"
-            >
-              <Download size={14} /> Download File
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );

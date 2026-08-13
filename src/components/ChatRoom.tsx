@@ -186,7 +186,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
 
   return (
     <div className="glass-panel h-[calc(100vh-100px)] min-h-[500px] flex flex-col overflow-hidden fade-in-up">
-      
+
       {/* Top Chat Header */}
       <div className="p-4 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-3 min-w-0">
@@ -233,11 +233,10 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
               <button
                 key={ch}
                 onClick={() => handleChannelSwitch(ch)}
-                className={`px-2 py-1 rounded transition flex items-center gap-1 ${
-                  activeChannel === ch
-                    ? 'bg-blue-600 text-white font-bold'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
+                className={`px-2 py-1 rounded transition flex items-center gap-1 ${activeChannel === ch
+                  ? 'bg-blue-600 text-white font-bold'
+                  : 'text-slate-400 hover:text-slate-200'
+                  }`}
               >
                 {ch === 'LAN' ? <Wifi size={10} /> : ch === 'Wi-Fi Direct' ? <Radio size={10} /> : <Bluetooth size={10} />}
                 {ch}
@@ -289,71 +288,90 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
                 </span>
 
                 <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2.5 space-y-1 shadow-md text-xs sm:text-sm ${
-                    isMe
-                      ? 'bg-blue-600 text-white rounded-br-none'
-                      : 'bg-slate-800 text-slate-100 border border-slate-700/70 rounded-bl-none'
-                  }`}
+                  className={`max-w-[80%] rounded-2xl px-4 py-2.5 space-y-1 shadow-md text-xs sm:text-sm ${isMe
+                    ? 'bg-blue-600 text-white rounded-br-none'
+                    : 'bg-slate-800 text-slate-100 border border-slate-700/70 rounded-bl-none'
+                    }`}
                 >
                   <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
 
-                  {/* Inline File Attachment / Image Thumbnail Card */}
                   {msg.fileAttachment && (
-                    <div className="mt-2.5 p-2.5 rounded-xl bg-slate-950/80 border border-slate-700/90 space-y-2 text-slate-100">
+                    <div style={{ marginTop: '6px', padding: '4px', background: '#020617', border: '1px solid #334155', width: '120px', flexShrink: 0 }}>
                       {msg.fileAttachment.fileType.startsWith('image/') ? (
                         <div
                           onClick={() => onSelectFile && onSelectFile(msg.fileAttachment!)}
-                          className="cursor-pointer overflow-hidden rounded-lg max-h-52 border border-slate-800 hover:opacity-90 transition relative group bg-slate-900 flex items-center justify-center"
-                          title="Click to view full image"
+                          style={{ cursor: 'pointer', overflow: 'hidden', width: '100%', height: '80px', border: '1px solid #1e293b', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}
+                          title={`Click to view ${msg.fileAttachment.fileName}`}
                         >
                           <img
                             src={msg.fileAttachment.fileData}
                             alt={msg.fileAttachment.fileName}
-                            className="w-full h-auto max-h-52 object-contain rounded-md"
+                            style={{ maxHeight: '76px', maxWidth: '100%', objectFit: 'contain' }}
                           />
-                          <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-xs font-bold text-white gap-1.5 backdrop-blur-[2px]">
-                            <Eye size={16} /> Click to expand
+                        </div>
+                      ) : msg.fileAttachment.fileType.startsWith('video/') ? (
+                        <div
+                          onClick={() => onSelectFile && onSelectFile(msg.fileAttachment!)}
+                          style={{ cursor: 'pointer', overflow: 'hidden', width: '100%', height: '80px', border: '1px solid #1e293b', background: '#020617', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}
+                          title={`Click to play ${msg.fileAttachment.fileName}`}
+                        >
+                          <video
+                            src={msg.fileAttachment.fileData}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }}
+                          />
+                          <div style={{ position: 'absolute', inset: 0, background: 'rgba(2,6,23,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px', fontWeight: 700, gap: '3px' }}>
+                            <Eye size={11} /> Play
                           </div>
                         </div>
-                      ) : null}
-
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="p-2 rounded-lg bg-blue-600/20 text-blue-400 shrink-0">
-                          <FileText size={20} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-white truncate" title={msg.fileAttachment.fileName}>
+                      ) : (
+                        <div
+                          onClick={() => onSelectFile && onSelectFile(msg.fileAttachment!)}
+                          style={{ cursor: 'pointer', width: '100%', height: '80px', border: '1px solid #1e293b', background: '#0f172a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', padding: '4px' }}
+                          title={`View ${msg.fileAttachment.fileName}`}
+                        >
+                          <div style={{ padding: '4px', background: 'rgba(37,99,235,0.15)', color: '#60a5fa' }}>
+                            <FileText size={16} />
+                          </div>
+                          <p style={{ fontSize: '9px', fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', textAlign: 'center', margin: 0 }}>
                             {msg.fileAttachment.fileName}
                           </p>
-                          <p className="text-[10px] font-mono text-slate-400">
-                            {(msg.fileAttachment.fileSize / (1024 * 1024)).toFixed(2)} MB • {msg.fileAttachment.channel}
-                            {msg.fileAttachment.escalatedToWifiDirect && ' (⚡ Wi-Fi Direct)'}
-                          </p>
                         </div>
+                      )}
+
+                      {/* File name + size */}
+                      <div style={{ padding: '3px 2px 0', overflow: 'hidden' }}>
+                        <p style={{ fontSize: '9px', fontWeight: 700, color: '#fff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={msg.fileAttachment.fileName}>
+                          {msg.fileAttachment.fileName}
+                        </p>
+                        <p style={{ fontSize: '8px', fontFamily: 'monospace', color: '#94a3b8', margin: '1px 0 0' }}>
+                          {(msg.fileAttachment.fileSize / (1024 * 1024)).toFixed(1)} MB
+                        </p>
                       </div>
 
-                      <div className="flex items-center gap-2 pt-1.5 border-t border-slate-800">
+                      {/* View + Download */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '3px', marginTop: '3px', paddingTop: '3px', borderTop: '1px solid #1e293b' }}>
                         <button
                           onClick={() => onSelectFile && onSelectFile(msg.fileAttachment!)}
-                          className="flex-1 py-1.5 px-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-[11px] font-medium text-white flex items-center justify-center gap-1.5 transition"
+                          style={{ flex: 1, padding: '2px 4px', background: '#2563eb', color: '#fff', border: 'none', fontSize: '9px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}
+                          title="View Full"
                         >
-                          <Eye size={12} /> View Full
+                          <Eye size={9} /> View
                         </button>
                         <a
                           href={msg.fileAttachment.fileData}
                           download={msg.fileAttachment.fileName}
-                          className="py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-medium text-slate-200 flex items-center justify-center gap-1.5 transition"
+                          style={{ padding: '2px 4px', background: '#1e293b', color: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', flexShrink: 0 }}
+                          title="Download"
                         >
-                          <Download size={12} /> Download
+                          <Download size={9} />
                         </a>
                       </div>
                     </div>
                   )}
 
                   <div
-                    className={`flex items-center justify-end gap-1.5 text-[10px] font-mono ${
-                      isMe ? 'text-blue-200' : 'text-slate-400'
-                    }`}
+                    className={`flex items-center justify-end gap-1.5 text-[10px] font-mono ${isMe ? 'text-blue-200' : 'text-slate-400'
+                      }`}
                   >
                     <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
 
