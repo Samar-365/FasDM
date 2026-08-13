@@ -4,7 +4,7 @@ FasDM Mesh – Internet-Free Messaging Platform
 ================================================================================
 
 Document: Module Breakdown Specification (12 Modules)
-Version: 2.0 (Post-Module 6 Status)
+Version: 2.1 (Post-Module 7, File Viewer 3X & Unread Notification Status)
 Standard Alignment: IEEE 29148 / Offline-First P2P Architecture
 
 ================================================================================
@@ -16,20 +16,20 @@ MODULE 1: User Profile & Cryptographic Identity
 --------------------------------------------------------------------------------
 - Purpose: Manages local identity creation, profile data, and cryptographic key generation.
 - Requirements: FR-1 (User Registration), FR-15 (Encryption)
-- Key Components: src/components/ProfileSetup.tsx, src/services/crypto.ts, src/services/db.ts
+- Key Components: src/components/ProfileSetup.tsx, src/services/crypto.ts, src/services/db.ts, src/App.tsx
 - Status: COMPLETED ✅
 - Specifications:
   * Username setup and avatar selection/custom color presets.
   * Web Crypto API P-256 ECDH Keypair generation (Public/Private keys).
   * Key Fingerprint generation via SHA-256 digest (e.g. ABCD-1234-EF56-7890).
-  * Session isolation via sessionStorage and offline IndexedDB persistence.
+  * Tab-isolated session management (`sessionStorage`). Fresh browser tabs launch directly at the initial Splash Screen landing page (`splash`), while reloaded tabs maintain their profile identity.
 
 --------------------------------------------------------------------------------
 MODULE 2: Local Device Discovery & Peer Scanning
 --------------------------------------------------------------------------------
 - Purpose: Discovers active nearby nodes across local transport mediums without internet.
 - Requirements: FR-2 (Device Discovery)
-- Key Components: src/components/PeerScanner.tsx, src/services/network.ts
+- Key Components: src/components/PeerScanner.tsx, src/services/network.ts, src/components/Dashboard.tsx
 - Status: COMPLETED ✅
 - Specifications:
   * Automatic beacon discovery over Local Wi-Fi (LAN), Wi-Fi Direct, and Bluetooth.
@@ -37,6 +37,9 @@ MODULE 2: Local Device Discovery & Peer Scanning
   * Signal strength (RSSI in dBm) measurement and latency calculation (ms).
   * Dynamic list of discovered and connected peer devices within < 5 seconds.
   * Single-tab simulated peer node generator for multi-device testing.
+  * **Unread Notification Highlights**: Peers with unread messages are highlighted in Nearby Devices with glowing rose borders (`border-2 border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.4)] animate-pulse`), floating top notification badges (`🔔 Unread Message!`), and highlighted action buttons (`● Unread Message — Start P2P Chat`).
+  * **Tab Notification Badges**: Animated `🔔 N New` unread badges on "Nearby Devices" and "Direct P2P Chat" dashboard tab buttons.
+  * **Instant Clearance**: Notification highlights clear automatically right after the respective peer chat room is opened.
 
 --------------------------------------------------------------------------------
 MODULE 3: QR Code Pairing & Identity Verification
@@ -61,6 +64,7 @@ MODULE 4: One-to-One Encrypted P2P Messaging
   * ECDH shared secret derivation combined with AES-GCM-256 payload encryption.
   * Random 12-byte Initialization Vector (IV) generation per message packet.
   * In-memory and IndexedDB message pipeline (`messages` store).
+  * Strict deduplication logic by `messageId` and `fileAttachment.fileId` to prevent duplicate message entries across tabs.
 
 --------------------------------------------------------------------------------
 MODULE 5: Message Status & Real-Time Indicators
@@ -88,19 +92,23 @@ MODULE 6: Group Messaging & Administration
   * Group encrypted packet distribution (GROUP_CREATE, GROUP_MESSAGE, GROUP_MEMBER_LEAVE, GROUP_DELETE).
   * Persistent group stores (`groups` and `group_messages`) in IndexedDB v2.
   * Automated simulated peer response workflow in groups containing test nodes.
+  * Inline file attachment rendering matching ChatRoom dimensions (`120px` width, `80px` frame height).
 
 --------------------------------------------------------------------------------
-MODULE 7: Peer-to-Peer File Sharing Engine
+MODULE 7: Peer-to-Peer File Sharing Engine & Media Viewer
 --------------------------------------------------------------------------------
-- Purpose: Transfers media and documents directly between connected nodes.
+- Purpose: Transfers media and documents directly between connected nodes with preview controls.
 - Requirements: FR-6 (File Sharing)
-- Key Components: src/components/FileViewerModal.tsx, src/services/network.ts, src/services/db.ts
+- Key Components: src/components/FileViewerModal.tsx, src/components/ChatRoom.tsx, src/components/GroupChatRoom.tsx, src/services/network.ts, src/services/db.ts
 - Status: COMPLETED ✅
 - Specifications:
   * Support for PDF, PNG, JPG, MP4, ZIP, PPT, and DOCX files up to 25MB.
   * Base64 / ArrayBuffer P2P transmission over FILE_TRANSFER network packets.
   * Automatic transport escalation to Wi-Fi Direct for large file payloads (>5MB).
-  * In-app file viewer preview and browser file download triggers.
+  * **Inline Compact Thumbnail Cards**: Sleek `120px` width, `80px` height inline file cards (`object-contain`, max `76px` image preview) to maintain neat chat timelines.
+  * **3X Expanded Media Viewer**: Floating full view modal (`FileViewerModal.tsx`) sized at 3X scale (`900px` width, `85vh` max height, `460px` image/video preview frame).
+  * Header download controls and close actions with 100% inline styles to bypass global CSS conflicts.
+  * Packet payload deduplication reusing `messageId` to eliminate duplicate file deliveries across tabs.
 
 --------------------------------------------------------------------------------
 MODULE 8: Voice Notes & Audio Messaging
@@ -147,6 +155,7 @@ MODULE 11: Local Storage Engine & Offline Persistence
 - Status: COMPLETED ✅
 - Specifications:
   * IndexedDB Version 2 object stores: profile, peers, messages, groups, group_messages, files.
+  * Added `getUnreadSenders(myId)` method to query unread message senders for notification badges.
   * Storage quota estimation API and clear/reset user data controls.
   * Full offline operation with persistent state across app restarts and reboots.
 
@@ -169,12 +178,12 @@ MODULE 12: Mesh Routing & Channel Auto-Selection
 
  1. Splash Screen UI Module          (Completed ✅ - App launch, onboarding workflow)
  2. Profile Setup UI Module          (Completed ✅ - Avatar color grid, handle input, key pair)
- 3. Nearby Devices Scanner UI Module (Completed ✅ - Discovered peers grid, RSSI, channel badges)
+ 3. Nearby Devices Scanner UI Module (Completed ✅ - Discovered peers grid, unread notifications, RSSI)
  4. QR Pairing UI Module             (Completed ✅ - QR identity generator modal)
- 5. Dashboard / Main Hub UI Module   (Completed ✅ - Overview stats, active channels, peer cards)
- 6. One-to-One Chat UI Module        (Completed ✅ - Chat timeline, message input, ticks)
- 7. Group Chat UI Module             (Completed ✅ - Group chat room, member list, admin controls)
- 8. File Viewer UI Module            (Completed ✅ - Attachment preview, document launcher, progress)
+ 5. Dashboard / Main Hub UI Module   (Completed ✅ - Overview stats, active channels, unread badges)
+ 6. One-to-One Chat UI Module        (Completed ✅ - Chat timeline, message input, ticks, inline cards)
+ 7. Group Chat UI Module             (Completed ✅ - Group chat room, member list, admin controls, inline cards)
+ 8. File Viewer UI Module            (Completed ✅ - 3X modal media viewer, attachment preview, header download)
  9. Shared Whiteboard UI Module      (Pending ⏳ - Real-time canvas drawing board & controls)
 10. Shared Checklist UI Module       (Pending ⏳ - Interactive task list & sync status)
 11. Sticky Notes UI Module          (Pending ⏳ - Multi-color collaborative notes board)
@@ -188,15 +197,15 @@ SUMMARY MATRIX: 12 MODULES VS FUNCTIONAL REQUIREMENTS
 Module Name                             | SRS Mapping    | Implementation Status
 --------------------------------------------------------------------------------
 Module 1: User Profile & Identity       | FR-1, FR-15    | Completed ✅ (Profile Setup & Keypair)
-Module 2: Device Discovery              | FR-2           | Completed ✅ (Peer Scanner & Beacons)
+Module 2: Device Discovery              | FR-2           | Completed ✅ (Peer Scanner, Beacons & Notifications)
 Module 3: QR Code Pairing               | FR-3           | Completed ✅ (QR Identity Engine)
 Module 4: One-to-One Encrypted Chat     | FR-4, FR-15    | Completed ✅ (Direct P2P & Receipts)
 Module 5: Message Status & Typing       | FR-8, FR-9     | Completed ✅ (ACKs & Typing Status)
 Module 6: Group Messaging & Admin       | FR-5           | Completed ✅ (Group Hub & Admin CRUD)
-Module 7: P2P File Sharing Engine       | FR-6           | Completed ✅ (File Attachments & Auto Escalation)
+Module 7: P2P File Sharing Engine       | FR-6           | Completed ✅ (3X File Viewer & Auto Escalation)
 Module 8: Voice Notes & Audio           | FR-7           | Pending ⏳ (MediaRecorder Audio Engine)
 Module 9: Emergency Broadcast System   | FR-10          | Pending ⏳ (Priority Alert Banner & Push)
 Module 10: Shared Collaboration Suite   | FR-11,12,13    | Pending ⏳ (Whiteboard / Checklist / Notes)
-Module 11: Local Storage Engine         | FR-14          | Completed ✅ (IndexedDB Engine v2)
-Module 12: Mesh Routing & Channel Auto  | FR-16, FR-17   | Completed ✅ (Multi-Transport Layer)
+Module 11: Local Storage Engine         | FR-14          | Completed ✅ (IndexedDB Engine v2 & Unread Query)
+Module 12: Mesh Routing Engine          | FR-16, FR-17   | In Progress 🔄 (Direct Multi-Channel Select)
 ================================================================================
