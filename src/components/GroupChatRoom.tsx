@@ -336,84 +336,77 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
                     >
                       <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
 
-                      {/* Inline Group File Attachment / Image Thumbnail Card (Compact 140px max width) */}
+                      {/* Inline Group File Attachment / Image Thumbnail Card */}
                       {msg.fileAttachment && (
-                        <div className="mt-2 p-1.5 rounded-xl bg-slate-950/85 border border-slate-700/80 space-y-1.5 text-slate-100 w-36 max-w-[140px] shrink-0 shadow-sm">
+                        <div style={{ marginTop: '6px', padding: '4px', background: '#020617', border: '1px solid #334155', width: '120px', flexShrink: 0 }}>
                           {msg.fileAttachment.fileType.startsWith('image/') ? (
                             <div
                               onClick={() => onSelectFile && onSelectFile(msg.fileAttachment!)}
-                              className="cursor-pointer overflow-hidden rounded-lg aspect-[4/3] w-full max-h-24 border border-slate-800 hover:opacity-90 transition relative group bg-slate-900 flex items-center justify-center"
-                              style={{ aspectRatio: '4 / 3' }}
+                              style={{ cursor: 'pointer', overflow: 'hidden', width: '100%', height: '80px', border: '1px solid #1e293b', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}
                               title={`Click to view ${msg.fileAttachment.fileName}`}
                             >
                               <img
                                 src={msg.fileAttachment.fileData}
                                 alt={msg.fileAttachment.fileName}
-                                className="max-h-full max-w-full object-contain rounded-md"
+                                style={{ maxHeight: '76px', maxWidth: '100%', objectFit: 'contain' }}
                               />
-                              <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-[10px] font-bold text-white gap-1 backdrop-blur-[1px]">
-                                <Eye size={13} /> View
-                              </div>
                             </div>
                           ) : msg.fileAttachment.fileType.startsWith('video/') ? (
                             <div
                               onClick={() => onSelectFile && onSelectFile(msg.fileAttachment!)}
-                              className="cursor-pointer overflow-hidden rounded-lg aspect-[4/3] w-full max-h-24 border border-slate-800 hover:opacity-90 transition relative group bg-slate-900 flex items-center justify-center"
-                              style={{ aspectRatio: '4 / 3' }}
+                              style={{ cursor: 'pointer', overflow: 'hidden', width: '100%', height: '80px', border: '1px solid #1e293b', background: '#020617', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}
                               title={`Click to play ${msg.fileAttachment.fileName}`}
                             >
                               <video
                                 src={msg.fileAttachment.fileData}
-                                className="w-full h-full object-cover rounded-md pointer-events-none"
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }}
                               />
-                              <div className="absolute inset-0 bg-slate-950/50 opacity-90 group-hover:opacity-100 transition flex items-center justify-center text-[10px] font-bold text-white gap-1 backdrop-blur-[1px]">
-                                <Eye size={13} /> Play
+                              <div style={{ position: 'absolute', inset: 0, background: 'rgba(2,6,23,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px', fontWeight: 700, gap: '3px' }}>
+                                <Eye size={11} /> Play
                               </div>
                             </div>
                           ) : (
                             <div
                               onClick={() => onSelectFile && onSelectFile(msg.fileAttachment!)}
-                              className="cursor-pointer overflow-hidden rounded-lg aspect-[4/3] w-full max-h-24 border border-slate-800/80 bg-slate-900/90 hover:bg-slate-800 transition flex flex-col items-center justify-center p-1.5 text-center space-y-1 relative group"
-                              style={{ aspectRatio: '4 / 3' }}
+                              style={{ cursor: 'pointer', width: '100%', height: '80px', border: '1px solid #1e293b', background: '#0f172a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', padding: '4px' }}
                               title={`View ${msg.fileAttachment.fileName}`}
                             >
-                              <div className="p-1.5 rounded-lg bg-blue-600/20 text-blue-400">
-                                <FileText size={18} />
+                              <div style={{ padding: '4px', background: 'rgba(37,99,235,0.15)', color: '#60a5fa' }}>
+                                <FileText size={16} />
                               </div>
-                              <p className="text-[10px] font-bold text-white truncate w-full px-0.5">
+                              <p style={{ fontSize: '9px', fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', textAlign: 'center', margin: 0 }}>
                                 {msg.fileAttachment.fileName}
                               </p>
                             </div>
                           )}
 
-                          {/* Details & Actions */}
-                          <div className="space-y-1 min-w-0">
-                            <div className="min-w-0">
-                              <p className="text-[11px] font-bold text-white truncate" title={msg.fileAttachment.fileName}>
-                                {msg.fileAttachment.fileName}
-                              </p>
-                              <p className="text-[9px] font-mono text-slate-400 truncate">
-                                {(msg.fileAttachment.fileSize / (1024 * 1024)).toFixed(1)} MB
-                              </p>
-                            </div>
+                          {/* File name + size */}
+                          <div style={{ padding: '3px 2px 0', overflow: 'hidden' }}>
+                            <p style={{ fontSize: '9px', fontWeight: 700, color: '#fff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={msg.fileAttachment.fileName}>
+                              {msg.fileAttachment.fileName}
+                            </p>
+                            <p style={{ fontSize: '8px', fontFamily: 'monospace', color: '#94a3b8', margin: '1px 0 0' }}>
+                              {(msg.fileAttachment.fileSize / (1024 * 1024)).toFixed(1)} MB
+                            </p>
+                          </div>
 
-                            <div className="flex items-center gap-1 pt-1 border-t border-slate-800">
-                              <button
-                                onClick={() => onSelectFile && onSelectFile(msg.fileAttachment!)}
-                                className="flex-1 py-1 px-1.5 rounded bg-blue-600 hover:bg-blue-500 text-[10px] font-medium text-white flex items-center justify-center gap-1 transition"
-                                title="View Full"
-                              >
-                                <Eye size={10} /> View
-                              </button>
-                              <a
-                                href={msg.fileAttachment.fileData}
-                                download={msg.fileAttachment.fileName}
-                                className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center transition shrink-0"
-                                title="Download"
-                              >
-                                <Download size={10} />
-                              </a>
-                            </div>
+                          {/* View + Download */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '3px', marginTop: '3px', paddingTop: '3px', borderTop: '1px solid #1e293b' }}>
+                            <button
+                              onClick={() => onSelectFile && onSelectFile(msg.fileAttachment!)}
+                              style={{ flex: 1, padding: '2px 4px', background: '#2563eb', color: '#fff', border: 'none', fontSize: '9px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}
+                              title="View Full"
+                            >
+                              <Eye size={9} /> View
+                            </button>
+                            <a
+                              href={msg.fileAttachment.fileData}
+                              download={msg.fileAttachment.fileName}
+                              style={{ padding: '2px 4px', background: '#1e293b', color: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', flexShrink: 0 }}
+                              title="Download"
+                            >
+                              <Download size={9} />
+                            </a>
                           </div>
                         </div>
                       )}
