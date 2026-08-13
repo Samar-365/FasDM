@@ -45,10 +45,22 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
     async function loadHistory() {
       try {
         const history = await dbEngine.getMessagesForPeer(currentUser.userId, peer.deviceId);
-        setMessages(history);
+        // Deduplicate history by messageId or fileAttachment fileId
+        const uniqueHistory = history.filter(
+          (msg, index, self) =>
+            index ===
+            self.findIndex(
+              (m) =>
+                m.messageId === msg.messageId ||
+                (m.fileAttachment &&
+                  msg.fileAttachment &&
+                  m.fileAttachment.fileId === msg.fileAttachment.fileId)
+            )
+        );
+        setMessages(uniqueHistory);
 
         // Send 'read' status update for incoming messages from this peer
-        history.forEach((msg) => {
+        uniqueHistory.forEach((msg) => {
           if (msg.senderId === peer.deviceId && msg.status !== 'read') {
             networkService.sendAck(peer.deviceId, msg.messageId, 'read');
             dbEngine.updateMessageStatus(msg.messageId, 'read');
@@ -68,7 +80,17 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
         (newMsg.senderId === currentUser.userId && newMsg.receiverId === peer.deviceId)
       ) {
         setMessages((prev) => {
-          if (prev.some((m) => m.messageId === newMsg.messageId)) return prev;
+          if (
+            prev.some(
+              (m) =>
+                m.messageId === newMsg.messageId ||
+                (m.fileAttachment &&
+                  newMsg.fileAttachment &&
+                  m.fileAttachment.fileId === newMsg.fileAttachment.fileId)
+            )
+          ) {
+            return prev;
+          }
           return [...prev, newMsg];
         });
 

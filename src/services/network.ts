@@ -766,8 +766,9 @@ export class P2PNetworkService {
     this.fileListeners.forEach((fn) => fn(sharedFile));
 
     // Attach file to a ChatMessage or GroupMessage so it renders inline in timeline
+    // Attach file to a ChatMessage or GroupMessage so it renders inline in timeline
+    let msgId = crypto.randomUUID();
     if (target.peer) {
-      const msgId = crypto.randomUUID();
       const chatMsg: ChatMessage = {
         messageId: msgId,
         senderId: this.currentUser.userId,
@@ -799,7 +800,6 @@ export class P2PNetworkService {
         }, 2000);
       }
     } else if (target.groupId) {
-      const msgId = crypto.randomUUID();
       const groupMsg: GroupMessage = {
         messageId: msgId,
         groupId: target.groupId,
@@ -829,6 +829,7 @@ export class P2PNetworkService {
         recipientId: target.peer?.deviceId,
         payload: {
           sharedFile,
+          messageId: msgId,
         },
         timestamp: Date.now(),
       };
@@ -846,6 +847,9 @@ export class P2PNetworkService {
 
     const file: SharedFile = packet.payload.sharedFile;
 
+    // Skip our own file transfer broadcasts — we already saved the message in sendFile()
+    if (file.senderId === this.currentUser.userId) return;
+
     // Check if packet is intended for me or for a group I belong to
     const isForMe = file.receiverId === this.currentUser.userId;
     const isForMyGroup = file.groupId && this.groups.has(file.groupId);
@@ -856,9 +860,11 @@ export class P2PNetworkService {
     await dbEngine.saveFile(file);
     this.fileListeners.forEach((fn) => fn(file));
 
+    // Reuse sender's messageId if sent in packet payload, else fallback to random UUID
+    const msgId = packet.payload.messageId || crypto.randomUUID();
+
     // Store inline timeline message
     if (isForMe) {
-      const msgId = crypto.randomUUID();
       const incomingMsg: ChatMessage = {
         messageId: msgId,
         senderId: file.senderId,
@@ -890,7 +896,6 @@ export class P2PNetworkService {
         this.broadcastChannel.postMessage(ackPacket);
       }
     } else if (isForMyGroup && file.groupId) {
-      const msgId = crypto.randomUUID();
       const gMsg: GroupMessage = {
         messageId: msgId,
         groupId: file.groupId,

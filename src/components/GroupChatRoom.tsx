@@ -78,7 +78,19 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
     async function loadGroupMessages() {
       try {
         const history = await dbEngine.getGroupMessages(selectedGroup!.groupId);
-        setMessages(history);
+        // Deduplicate history by messageId or fileAttachment fileId
+        const uniqueHistory = history.filter(
+          (msg, index, self) =>
+            index ===
+            self.findIndex(
+              (m) =>
+                m.messageId === msg.messageId ||
+                (m.fileAttachment &&
+                  msg.fileAttachment &&
+                  m.fileAttachment.fileId === msg.fileAttachment.fileId)
+            )
+        );
+        setMessages(uniqueHistory);
       } catch (err) {
         console.error('Error loading group message history:', err);
       }
@@ -89,7 +101,17 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
     const unsubGroupMsgs = networkService.subscribeGroupMessages((gId, newMsg) => {
       if (gId === selectedGroup.groupId) {
         setMessages((prev) => {
-          if (prev.some((m) => m.messageId === newMsg.messageId)) return prev;
+          if (
+            prev.some(
+              (m) =>
+                m.messageId === newMsg.messageId ||
+                (m.fileAttachment &&
+                  newMsg.fileAttachment &&
+                  m.fileAttachment.fileId === newMsg.fileAttachment.fileId)
+            )
+          ) {
+            return prev;
+          }
           return [...prev, newMsg];
         });
       }
