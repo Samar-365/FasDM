@@ -62,7 +62,7 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
     });
 
     const unsubPeers = networkService.subscribePeers((peers) => {
-      setAvailablePeers(peers);
+      setAvailablePeers(peers.filter((p) => p.deviceId !== currentUser.userId));
     });
 
     return () => {

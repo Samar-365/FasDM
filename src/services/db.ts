@@ -136,6 +136,17 @@ export class LocalStorageEngine {
     }
   }
 
+  async deletePeer(deviceId: string): Promise<void> {
+    const db = await this.initDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('peers', 'readwrite');
+      const store = tx.objectStore('peers');
+      const request = store.delete(deviceId);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
   // --- Message Store Operations ---
   async saveMessage(message: ChatMessage): Promise<void> {
     const db = await this.initDB();

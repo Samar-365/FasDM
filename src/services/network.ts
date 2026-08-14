@@ -54,9 +54,13 @@ export class P2PNetworkService {
     try {
       const savedPeers = await dbEngine.getAllPeers();
       savedPeers.forEach((p) => {
+        // Skip self — don't add current user as a discovered peer
+        if (p.deviceId === user.userId) return;
         // Mark as discovered initially until beacon seen
         this.discoveredPeers.set(p.deviceId, { ...p, status: 'discovered' });
       });
+      // Clean up any stale self-entry from DB (e.g. saved by another tab)
+      await dbEngine.deletePeer(user.userId).catch(() => {});
       this.notifyPeerListeners();
 
       const savedGroups = await dbEngine.getGroups();
@@ -271,11 +275,19 @@ export class P2PNetworkService {
 
       case 'GROUP_MEMBER_LEAVE':
         if (packet.payload?.groupId && packet.payload?.userId) {
-          const group = this.groups.get(packet.payload.groupId);
-          if (group) {
-            group.members = group.members.filter((m) => m.userId !== packet.payload.userId);
-            await dbEngine.saveGroup(group);
+          const removedUserId = packet.payload.userId;
+          // If the current user was removed (kicked), delete the group from local state entirely
+          if (removedUserId === this.currentUser.userId) {
+            this.groups.delete(packet.payload.groupId);
+            await dbEngine.deleteGroup(packet.payload.groupId);
             this.notifyGroupListeners();
+          } else {
+            const group = this.groups.get(packet.payload.groupId);
+            if (group) {
+              group.members = group.members.filter((m) => m.userId !== removedUserId);
+              await dbEngine.saveGroup(group);
+              this.notifyGroupListeners();
+            }
           }
         }
         break;
@@ -678,10 +690,9 @@ export class P2PNetworkService {
     const group = this.groups.get(groupId);
     if (!group) return;
 
-    group.members = group.members.filter((m) => m.userId !== memberId);
-    await dbEngine.saveGroup(group);
-    this.notifyGroupListeners();
+    const isSelfLeaving = memberId === this.currentUser?.userId;
 
+    // Broadcast the leave/kick packet BEFORE modifying local state so the packet is sent
     if (this.broadcastChannel && this.currentUser) {
       const packet: NetworkPacket = {
         id: crypto.randomUUID(),
@@ -697,6 +708,18 @@ export class P2PNetworkService {
       };
       this.broadcastChannel.postMessage(packet);
     }
+
+    if (isSelfLeaving) {
+      // Current user is leaving — remove the group entirely from local state & DB
+      this.groups.delete(groupId);
+      await dbEngine.deleteGroup(groupId);
+    } else {
+      // Admin kicked another member — just update the members list
+      group.members = group.members.filter((m) => m.userId !== memberId);
+      await dbEngine.saveGroup(group);
+    }
+
+    this.notifyGroupListeners();
   }
 
   /**
