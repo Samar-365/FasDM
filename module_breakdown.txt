@@ -113,14 +113,17 @@ MODULE 7: Peer-to-Peer File Sharing Engine & Media Viewer
 --------------------------------------------------------------------------------
 MODULE 8: Voice Notes & Audio Messaging
 --------------------------------------------------------------------------------
-- Purpose: Enables recording, transmitting, and playing voice messages offline.
+- Purpose: Enables recording, transmitting, and playing voice messages offline across 1-to-1 and Group Hub mesh chats.
 - Requirements: FR-7 (Voice Messages)
-- Key Components: src/components/AudioRecorder.tsx, src/components/ChatRoom.tsx, src/services/db.ts
-- Status: PENDING ⏳ (Next Up for Implementation)
-- Specifications:
-  * Microphone capture using MediaRecorder API (audio/webm, audio/ogg).
-  * Inline waveform/timer audio recorder component with Start, Stop, and Send buttons.
-  * Inline audio player component with Play/Pause, timeline slider, and duration label.
+- Key Components: src/components/AudioRecorder.tsx, src/components/ChatRoom.tsx, src/components/GroupChatRoom.tsx, src/services/network.ts, src/services/db.ts, src/types/index.ts
+- Status: IN PROGRESS ⏳
+- Submodules:
+  * 8.1 Data Model & Types: `VoiceNote` interface (voiceId, durationMs, audioData base64, mimeType, fileSize), `ChatMessage.voiceNote`, `GroupMessage.voiceNote`, `VOICE_NOTE` and `VOICE_ACK` network packet types.
+  * 8.2 MediaRecorder & Waveform Analyzer Engine: Browser `MediaRecorder` API (`audio/webm`, `audio/ogg`), real-time frequency data extraction via Web Audio API (`AudioContext`, `AnalyserNode`), and microphone permission handling.
+  * 8.3 Voice Recording UI Component: Compact microphone trigger button in input bar, real-time live pulsating waveform visualizer, recording duration timer (MM:SS), cancel button, stop & preview button, and instant send.
+  * 8.4 Inline Voice Note Audio Player: Sleek in-bubble custom audio player with play/pause controls, static acoustic waveform bar visualization, interactive seek progress bar, and dynamic elapsed/total duration timestamps.
+  * 8.5 P2P Mesh Network Voice Transport: Broadcast payload distribution over `VOICE_NOTE` packets, direct 1-to-1 & Group Hub routing, simulated peer voice acknowledgments, and packet deduplication.
+  * 8.6 Timeline & Storage Integration: Embedding voice messages seamlessly inside `ChatRoom.tsx` (1-to-1) and `GroupChatRoom.tsx` (Group Hub) timeline threads with full offline IndexedDB persistence.
 
 --------------------------------------------------------------------------------
 MODULE 9: Emergency Broadcast System
