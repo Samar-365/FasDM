@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { UserProfile, GroupChat, GroupMessage, PeerDevice, TransportChannel, SharedFile } from '../types';
+import { UserProfile, GroupChat, GroupMessage, PeerDevice, TransportChannel, SharedFile, VoiceNote } from '../types';
+import { AudioRecorder } from './AudioRecorder';
 import { networkService } from '../services/network';
 import { dbEngine } from '../services/db';
 import {
@@ -35,6 +36,7 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
   const [inputText, setInputText] = useState('');
   const [availablePeers, setAvailablePeers] = useState<PeerDevice[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
 
   // Modals state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -230,6 +232,47 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
     };
 
     reader.readAsDataURL(file);
+  };
+
+  // ── Group Voice Note Send Handler (Submodule 8.3) ─────────────────────────
+  const handleVoiceNoteSend = async (
+    audioData: string,
+    durationMs: number,
+    mimeType: string,
+    fileSize: number
+  ) => {
+    if (!selectedGroup) return;
+
+    const voiceId = `voice_${crypto.randomUUID()}`;
+    const messageId = crypto.randomUUID();
+
+    const voiceNote: VoiceNote = {
+      voiceId,
+      senderId: currentUser.userId,
+      senderName: currentUser.username,
+      audioData,
+      durationMs,
+      mimeType,
+      fileSize,
+      timestamp: Date.now(),
+      channel: 'LAN',
+    };
+
+    const groupMsg: GroupMessage = {
+      messageId,
+      groupId: selectedGroup.groupId,
+      senderId: currentUser.userId,
+      senderName: currentUser.username,
+      senderAvatar: currentUser.avatar,
+      content: `🎙️ Voice Note (${Math.ceil(durationMs / 1000)}s)`,
+      timestamp: Date.now(),
+      channel: 'LAN',
+      voiceNote,
+    };
+
+    await dbEngine.saveGroupMessage(groupMsg);
+    setMessages((prev) => [...prev, groupMsg]);
+    setIsRecording(false);
   };
 
   const isAdmin = selectedGroup?.adminId === currentUser.userId;
@@ -491,40 +534,55 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
             onSubmit={handleSendMessage}
             className="p-3 bg-slate-900 border-t border-slate-800 flex items-center gap-2 shrink-0 z-10 relative"
           >
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              className="p-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-cyan-400 hover:bg-slate-700 border border-slate-700/80 transition disabled:opacity-50 shrink-0 flex items-center justify-center cursor-pointer"
-              title="Attach Image or File (Max 25MB)"
-            >
-              <Paperclip size={18} />
-            </button>
+            {!isRecording && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="p-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-cyan-400 hover:bg-slate-700 border border-slate-700/80 transition disabled:opacity-50 shrink-0 flex items-center justify-center cursor-pointer"
+                  title="Attach Image or File (Max 25MB)"
+                >
+                  <Paperclip size={18} />
+                </button>
 
-            <button
-              type="button"
-              onClick={() => setShowQuickEmojis(!showQuickEmojis)}
-              className="p-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-amber-400 hover:bg-slate-700 border border-slate-700/80 transition shrink-0 flex items-center justify-center cursor-pointer"
-              title="Quick Emojis"
-            >
-              <Smile size={18} />
-            </button>
+                <button
+                  type="button"
+                  onClick={() => setShowQuickEmojis(!showQuickEmojis)}
+                  className="p-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-amber-400 hover:bg-slate-700 border border-slate-700/80 transition shrink-0 flex items-center justify-center cursor-pointer"
+                  title="Quick Emojis"
+                >
+                  <Smile size={18} />
+                </button>
+              </>
+            )}
 
-            <input
-              type="text"
-              placeholder={`Message group ${selectedGroup.groupName}...`}
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              className="flex-1 min-w-[120px] py-2.5 px-4 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 shadow-inner"
+            {/* Group Voice Recorder — replaces text input when recording */}
+            <AudioRecorder
+              onSend={handleVoiceNoteSend}
+              onCancel={() => setIsRecording(false)}
+              onRecordingStart={() => setIsRecording(true)}
             />
 
-            <button
-              type="submit"
-              disabled={!inputText.trim() || isUploading}
-              className="btn btn-primary text-xs py-2.5 px-4 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-            >
-              <Send size={14} /> Send Group
-            </button>
+            {!isRecording && (
+              <>
+                <input
+                  type="text"
+                  placeholder={`Message group ${selectedGroup.groupName}...`}
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  className="flex-1 min-w-[120px] py-2.5 px-4 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 shadow-inner"
+                />
+
+                <button
+                  type="submit"
+                  disabled={!inputText.trim() || isUploading}
+                  className="btn btn-primary text-xs py-2.5 px-4 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                >
+                  <Send size={14} /> Send Group
+                </button>
+              </>
+            )}
           </form>
         </div>
       ) : (

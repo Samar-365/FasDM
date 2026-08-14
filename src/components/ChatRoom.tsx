@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { UserProfile, PeerDevice, ChatMessage, TransportChannel, MessageStatus, SharedFile } from '../types';
+import { UserProfile, PeerDevice, ChatMessage, TransportChannel, MessageStatus, SharedFile, VoiceNote } from '../types';
+import { AudioRecorder } from './AudioRecorder';
 import { networkService } from '../services/network';
 import { dbEngine } from '../services/db';
 import {
@@ -35,6 +36,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
   const [isPeerTyping, setIsPeerTyping] = useState(false);
   const [showQuickEmojis, setShowQuickEmojis] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimerRef = useRef<number | null>(null);
@@ -204,6 +206,44 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
     };
 
     reader.readAsDataURL(file);
+  };
+
+  // ── Voice Note Send Handler (Submodule 8.3) ──────────────────────────────
+  const handleVoiceNoteSend = async (
+    audioData: string,
+    durationMs: number,
+    mimeType: string,
+    fileSize: number
+  ) => {
+    const voiceId = `voice_${crypto.randomUUID()}`;
+    const messageId = crypto.randomUUID();
+
+    const voiceNote: VoiceNote = {
+      voiceId,
+      senderId: currentUser.userId,
+      senderName: currentUser.username,
+      audioData,
+      durationMs,
+      mimeType,
+      fileSize,
+      timestamp: Date.now(),
+      channel: activeChannel,
+    };
+
+    const chatMsg: ChatMessage = {
+      messageId,
+      senderId: currentUser.userId,
+      receiverId: peer.deviceId,
+      content: `🎙️ Voice Note (${Math.ceil(durationMs / 1000)}s)`,
+      timestamp: Date.now(),
+      status: 'sent',
+      channel: activeChannel,
+      voiceNote,
+    };
+
+    await dbEngine.saveMessage(chatMsg);
+    setMessages((prev) => [...prev, chatMsg]);
+    setIsRecording(false);
   };
 
   return (
@@ -470,40 +510,55 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
         onSubmit={handleSendMessage}
         className="p-3 bg-slate-900 border-t border-slate-800 flex items-center gap-2 shrink-0 z-10 relative"
       >
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
-          className="p-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-cyan-400 hover:bg-slate-700 border border-slate-700/80 transition disabled:opacity-50 shrink-0 flex items-center justify-center cursor-pointer"
-          title="Attach Image or File (Max 25MB)"
-        >
-          <Paperclip size={18} />
-        </button>
+        {!isRecording && (
+          <>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="p-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-cyan-400 hover:bg-slate-700 border border-slate-700/80 transition disabled:opacity-50 shrink-0 flex items-center justify-center cursor-pointer"
+              title="Attach Image or File (Max 25MB)"
+            >
+              <Paperclip size={18} />
+            </button>
 
-        <button
-          type="button"
-          onClick={() => setShowQuickEmojis(!showQuickEmojis)}
-          className="p-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-amber-400 hover:bg-slate-700 border border-slate-700/80 transition shrink-0 flex items-center justify-center cursor-pointer"
-          title="Quick Emojis"
-        >
-          <Smile size={18} />
-        </button>
+            <button
+              type="button"
+              onClick={() => setShowQuickEmojis(!showQuickEmojis)}
+              className="p-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-amber-400 hover:bg-slate-700 border border-slate-700/80 transition shrink-0 flex items-center justify-center cursor-pointer"
+              title="Quick Emojis"
+            >
+              <Smile size={18} />
+            </button>
+          </>
+        )}
 
-        <input
-          type="text"
-          placeholder={`Type message to ${peer.username} (P2P ${activeChannel})...`}
-          value={inputText}
-          onChange={handleInputChange}
-          className="flex-1 min-w-[120px] py-2.5 px-4 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 shadow-inner"
+        {/* Voice Recorder — replaces text input when recording */}
+        <AudioRecorder
+          onSend={handleVoiceNoteSend}
+          onCancel={() => setIsRecording(false)}
+          onRecordingStart={() => setIsRecording(true)}
         />
 
-        <button
-          type="submit"
-          disabled={!inputText.trim() || isUploading}
-          className="btn btn-primary text-xs py-2.5 px-4 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-        >
-          <Send size={14} /> Send
-        </button>
+        {!isRecording && (
+          <>
+            <input
+              type="text"
+              placeholder={`Type message to ${peer.username} (P2P ${activeChannel})...`}
+              value={inputText}
+              onChange={handleInputChange}
+              className="flex-1 min-w-[120px] py-2.5 px-4 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 shadow-inner"
+            />
+
+            <button
+              type="submit"
+              disabled={!inputText.trim() || isUploading}
+              className="btn btn-primary text-xs py-2.5 px-4 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+            >
+              <Send size={14} /> Send
+            </button>
+          </>
+        )}
       </form>
     </div>
   );

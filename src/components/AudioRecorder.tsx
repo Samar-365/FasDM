@@ -17,6 +17,8 @@ interface AudioRecorderProps {
   onSend: (audioData: string, durationMs: number, mimeType: string, fileSize: number) => void;
   /** Called when user cancels the recorder */
   onCancel: () => void;
+  /** Called when recording starts or is active */
+  onRecordingStart?: () => void;
   /** Max recording duration in seconds (default 120) */
   maxDurationSec?: number;
 }
@@ -50,6 +52,7 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 export const AudioRecorder: React.FC<AudioRecorderProps> = ({
   onSend,
   onCancel,
+  onRecordingStart,
   maxDurationSec = 120,
 }) => {
   const [state, setState] = useState<RecorderState>('idle');
@@ -151,6 +154,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
   const startRecording = useCallback(async () => {
     setErrorMsg(null);
     setState('requesting');
+    onRecordingStart?.();
 
     try {
       // 1. Request microphone permission
@@ -220,6 +224,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
     } catch (err: any) {
       cleanup();
       setState('idle');
+      onCancel?.();
       if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
         setErrorMsg('Microphone access denied. Please allow mic permissions.');
       } else if (err?.name === 'NotFoundError') {
@@ -228,7 +233,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
         setErrorMsg('Failed to access microphone.');
       }
     }
-  }, [cleanup, maxDurationSec, startWaveformLoop]);
+  }, [cleanup, maxDurationSec, onCancel, onRecordingStart, startWaveformLoop]);
 
   // ── Stop Recording ───────────────────────────────────────────────────────
   const stopRecording = useCallback(() => {
