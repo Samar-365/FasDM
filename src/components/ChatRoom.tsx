@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { UserProfile, PeerDevice, ChatMessage, TransportChannel, MessageStatus, SharedFile } from '../types';
+import { UserProfile, PeerDevice, ChatMessage, TransportChannel, MessageStatus, SharedFile, VoiceNote } from '../types';
+import { AudioRecorder } from './AudioRecorder';
+import { VoiceNotePlayer } from './VoiceNotePlayer';
 import { networkService } from '../services/network';
 import { dbEngine } from '../services/db';
 import {
@@ -35,6 +37,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
   const [isPeerTyping, setIsPeerTyping] = useState(false);
   const [showQuickEmojis, setShowQuickEmojis] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimerRef = useRef<number | null>(null);
@@ -45,7 +48,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
     async function loadHistory() {
       try {
         const history = await dbEngine.getMessagesForPeer(currentUser.userId, peer.deviceId);
-        // Deduplicate history by messageId or fileAttachment fileId
+        // Deduplicate history by messageId, fileId, or voiceId
         const uniqueHistory = history.filter(
           (msg, index, self) =>
             index ===
@@ -54,7 +57,10 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
                 m.messageId === msg.messageId ||
                 (m.fileAttachment &&
                   msg.fileAttachment &&
-                  m.fileAttachment.fileId === msg.fileAttachment.fileId)
+                  m.fileAttachment.fileId === msg.fileAttachment.fileId) ||
+                (m.voiceNote &&
+                  msg.voiceNote &&
+                  m.voiceNote.voiceId === msg.voiceNote.voiceId)
             )
         );
         setMessages(uniqueHistory);
@@ -86,7 +92,10 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
                 m.messageId === newMsg.messageId ||
                 (m.fileAttachment &&
                   newMsg.fileAttachment &&
-                  m.fileAttachment.fileId === newMsg.fileAttachment.fileId)
+                  m.fileAttachment.fileId === newMsg.fileAttachment.fileId) ||
+                (m.voiceNote &&
+                  newMsg.voiceNote &&
+                  m.voiceNote.voiceId === newMsg.voiceNote.voiceId)
             )
           ) {
             return prev;
@@ -206,6 +215,27 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
     reader.readAsDataURL(file);
   };
 
+  // ── Voice Note Send Handler (Submodules 8.3 & 8.5) ───────────────────────
+  const handleVoiceNoteSend = async (
+    audioData: string,
+    durationMs: number,
+    mimeType: string,
+    fileSize: number
+  ) => {
+    try {
+      await networkService.sendVoiceNote(
+        { peer },
+        { audioData, durationMs, mimeType, fileSize },
+        activeChannel
+      );
+    } catch (err) {
+      console.error('Failed to send voice note:', err);
+      alert('Failed to transmit voice note over P2P mesh');
+    } finally {
+      setIsRecording(false);
+    }
+  };
+
   return (
     <div className="glass-panel h-[calc(100vh-100px)] min-h-[500px] flex flex-col overflow-hidden fade-in-up">
 
@@ -310,12 +340,20 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
                 </span>
 
                 <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2.5 space-y-1 shadow-md text-xs sm:text-sm ${isMe
+                  className={`max-w-[85%] rounded-2xl px-4 py-2.5 space-y-1 shadow-md text-xs sm:text-sm ${isMe
                     ? 'bg-blue-600 text-white rounded-br-none'
                     : 'bg-slate-800 text-slate-100 border border-slate-700/70 rounded-bl-none'
                     }`}
                 >
-                  <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
+                  {/* Text content (hidden if message only contains a voiceNote) */}
+                  {(!msg.voiceNote || (msg.content && !msg.content.startsWith('🎙️ Voice Note'))) && (
+                    <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
+                  )}
+
+                  {/* Inline Voice Note Player (Submodule 8.4) */}
+                  {msg.voiceNote && (
+                    <VoiceNotePlayer voiceNote={msg.voiceNote} isSelf={isMe} />
+                  )}
 
                   {msg.fileAttachment && (
                     <div style={{ marginTop: '6px', padding: '4px', background: '#020617', border: '1px solid #334155', width: '120px', flexShrink: 0 }}>
@@ -470,40 +508,55 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
         onSubmit={handleSendMessage}
         className="p-3 bg-slate-900 border-t border-slate-800 flex items-center gap-2 shrink-0 z-10 relative"
       >
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
-          className="p-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-cyan-400 hover:bg-slate-700 border border-slate-700/80 transition disabled:opacity-50 shrink-0 flex items-center justify-center cursor-pointer"
-          title="Attach Image or File (Max 25MB)"
-        >
-          <Paperclip size={18} />
-        </button>
+        {!isRecording && (
+          <>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="p-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-cyan-400 hover:bg-slate-700 border border-slate-700/80 transition disabled:opacity-50 shrink-0 flex items-center justify-center cursor-pointer"
+              title="Attach Image or File (Max 25MB)"
+            >
+              <Paperclip size={18} />
+            </button>
 
-        <button
-          type="button"
-          onClick={() => setShowQuickEmojis(!showQuickEmojis)}
-          className="p-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-amber-400 hover:bg-slate-700 border border-slate-700/80 transition shrink-0 flex items-center justify-center cursor-pointer"
-          title="Quick Emojis"
-        >
-          <Smile size={18} />
-        </button>
+            <button
+              type="button"
+              onClick={() => setShowQuickEmojis(!showQuickEmojis)}
+              className="p-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-amber-400 hover:bg-slate-700 border border-slate-700/80 transition shrink-0 flex items-center justify-center cursor-pointer"
+              title="Quick Emojis"
+            >
+              <Smile size={18} />
+            </button>
+          </>
+        )}
 
-        <input
-          type="text"
-          placeholder={`Type message to ${peer.username} (P2P ${activeChannel})...`}
-          value={inputText}
-          onChange={handleInputChange}
-          className="flex-1 min-w-[120px] py-2.5 px-4 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 shadow-inner"
+        {/* Voice Recorder — replaces text input when recording */}
+        <AudioRecorder
+          onSend={handleVoiceNoteSend}
+          onCancel={() => setIsRecording(false)}
+          onRecordingStart={() => setIsRecording(true)}
         />
 
-        <button
-          type="submit"
-          disabled={!inputText.trim() || isUploading}
-          className="btn btn-primary text-xs py-2.5 px-4 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-        >
-          <Send size={14} /> Send
-        </button>
+        {!isRecording && (
+          <>
+            <input
+              type="text"
+              placeholder={`Type message to ${peer.username} (P2P ${activeChannel})...`}
+              value={inputText}
+              onChange={handleInputChange}
+              className="flex-1 min-w-[120px] py-2.5 px-4 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 shadow-inner"
+            />
+
+            <button
+              type="submit"
+              disabled={!inputText.trim() || isUploading}
+              className="btn btn-primary text-xs py-2.5 px-4 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+            >
+              <Send size={14} /> Send
+            </button>
+          </>
+        )}
       </form>
     </div>
   );

@@ -8,6 +8,7 @@ import {
   TransportChannel,
   MessageStatus,
   SharedFile,
+  VoiceNote,
 } from '../types';
 import { dbEngine } from './db';
 
@@ -309,6 +310,17 @@ export class P2PNetworkService {
         if (packet.recipientId === this.currentUser.userId) {
           const { fileId } = packet.payload;
           console.log(`[P2P Network] File transfer ACK received for ${fileId}`);
+        }
+        break;
+
+      case 'VOICE_NOTE':
+        await this.handleIncomingVoiceNote(packet);
+        break;
+
+      case 'VOICE_ACK':
+        if (packet.recipientId === this.currentUser.userId) {
+          const { voiceId } = packet.payload;
+          console.log(`[P2P Network] Voice note ACK received for ${voiceId}`);
         }
         break;
 
@@ -932,6 +944,206 @@ export class P2PNetworkService {
       };
       await dbEngine.saveGroupMessage(gMsg);
       this.groupMessageListeners.forEach((fn) => fn(file.groupId!, gMsg));
+    }
+  }
+
+  // =========================================================================
+  // VOICE NOTES ENGINE (MODULE 8)
+  // =========================================================================
+
+  /**
+   * Transmits voice note payload across P2P channels for 1-to-1 and group chats (FR-7)
+   */
+  async sendVoiceNote(
+    target: { peer?: PeerDevice; groupId?: string },
+    voiceData: { audioData: string; durationMs: number; mimeType: string; fileSize: number },
+    channelOverride?: TransportChannel
+  ): Promise<VoiceNote> {
+    if (!this.currentUser) throw new Error('Identity not initialized');
+
+    const effectiveChannel: TransportChannel =
+      channelOverride || target.peer?.connectionType || this.activeChannel;
+
+    const voiceId = `voice_${crypto.randomUUID()}`;
+
+    const voiceNote: VoiceNote = {
+      voiceId,
+      senderId: this.currentUser.userId,
+      senderName: this.currentUser.username,
+      audioData: voiceData.audioData,
+      durationMs: voiceData.durationMs,
+      mimeType: voiceData.mimeType,
+      fileSize: voiceData.fileSize,
+      timestamp: Date.now(),
+      channel: effectiveChannel,
+    };
+
+    const msgId = crypto.randomUUID();
+
+    if (target.peer) {
+      const chatMsg: ChatMessage = {
+        messageId: msgId,
+        senderId: this.currentUser.userId,
+        receiverId: target.peer.deviceId,
+        content: `🎙️ Voice Note (${Math.ceil(voiceData.durationMs / 1000)}s)`,
+        timestamp: Date.now(),
+        status: 'sent',
+        channel: effectiveChannel,
+        voiceNote,
+      };
+      await dbEngine.saveMessage(chatMsg);
+      this.messageListeners.forEach((fn) => fn(chatMsg));
+
+      // Simulated peer voice response
+      if (target.peer.isSimulated) {
+        setTimeout(async () => {
+          const simReplyId = crypto.randomUUID();
+          const sec = Math.ceil(voiceData.durationMs / 1000);
+          const responses = [
+            `🎙️ Received your ${sec}s voice message clearly!`,
+            `Voice note decoded and played successfully over ${effectiveChannel}. 🔊`,
+            `Got the voice note (${sec}s). Sounds great! 👍`,
+          ];
+          const simReplyText = responses[Math.floor(Math.random() * responses.length)];
+          const responseMsg: ChatMessage = {
+            messageId: simReplyId,
+            senderId: target.peer!.deviceId,
+            receiverId: this.currentUser!.userId,
+            content: simReplyText,
+            timestamp: Date.now(),
+            status: 'delivered',
+            channel: effectiveChannel,
+          };
+          await dbEngine.saveMessage(responseMsg);
+          this.messageListeners.forEach((fn) => fn(responseMsg));
+        }, 2200);
+      }
+    } else if (target.groupId) {
+      const groupMsg: GroupMessage = {
+        messageId: msgId,
+        groupId: target.groupId,
+        senderId: this.currentUser.userId,
+        senderName: this.currentUser.username,
+        senderAvatar: this.currentUser.avatar,
+        content: `🎙️ Voice Note (${Math.ceil(voiceData.durationMs / 1000)}s)`,
+        timestamp: Date.now(),
+        channel: effectiveChannel,
+        voiceNote,
+      };
+      await dbEngine.saveGroupMessage(groupMsg);
+      this.groupMessageListeners.forEach((fn) => fn(target.groupId!, groupMsg));
+
+      // Simulated peer voice response in group
+      const group = this.groups.get(target.groupId);
+      const simMembers = group?.members.filter((m) => m.userId.startsWith('sim_')) || [];
+      if (simMembers.length > 0) {
+        const randomSimMember = simMembers[Math.floor(Math.random() * simMembers.length)];
+        setTimeout(async () => {
+          const replyMsgId = crypto.randomUUID();
+          const simReply: GroupMessage = {
+            messageId: replyMsgId,
+            groupId: target.groupId!,
+            senderId: randomSimMember.userId,
+            senderName: randomSimMember.username,
+            senderAvatar: randomSimMember.avatar,
+            content: `🎙️ Received voice note in group! Audio decoded properly.`,
+            timestamp: Date.now(),
+            channel: effectiveChannel,
+          };
+          await dbEngine.saveGroupMessage(simReply);
+          this.groupMessageListeners.forEach((fn) => fn(target.groupId!, simReply));
+        }, 2500);
+      }
+    }
+
+    // Broadcast VOICE_NOTE packet across mesh transport
+    if (this.broadcastChannel) {
+      const packet: NetworkPacket = {
+        id: crypto.randomUUID(),
+        type: 'VOICE_NOTE',
+        sender: {
+          userId: this.currentUser.userId,
+          username: this.currentUser.username,
+          avatar: this.currentUser.avatar,
+          connectionType: effectiveChannel,
+        },
+        recipientId: target.peer?.deviceId,
+        payload: {
+          voiceNote,
+          messageId: msgId,
+          groupId: target.groupId,
+        },
+        timestamp: Date.now(),
+      };
+      this.broadcastChannel.postMessage(packet);
+    }
+
+    return voiceNote;
+  }
+
+  /**
+   * Processes incoming VOICE_NOTE packet from mesh network
+   */
+  private async handleIncomingVoiceNote(packet: NetworkPacket) {
+    if (!this.currentUser || !packet.payload?.voiceNote) return;
+
+    const voiceNote: VoiceNote = packet.payload.voiceNote;
+
+    // Skip our own voice note broadcasts
+    if (voiceNote.senderId === this.currentUser.userId) return;
+
+    const isForMe = packet.recipientId === this.currentUser.userId;
+    const isForMyGroup = packet.payload?.groupId && this.groups.has(packet.payload.groupId);
+
+    if (!isForMe && !isForMyGroup) return;
+
+    const msgId = packet.payload.messageId || crypto.randomUUID();
+
+    if (isForMe) {
+      const incomingMsg: ChatMessage = {
+        messageId: msgId,
+        senderId: voiceNote.senderId,
+        receiverId: this.currentUser.userId,
+        content: `🎙️ Voice Note (${Math.ceil(voiceNote.durationMs / 1000)}s)`,
+        timestamp: voiceNote.timestamp || Date.now(),
+        status: 'delivered',
+        channel: voiceNote.channel,
+        voiceNote,
+      };
+      await dbEngine.saveMessage(incomingMsg);
+      this.messageListeners.forEach((fn) => fn(incomingMsg));
+
+      // Send ACK
+      if (this.broadcastChannel) {
+        const ackPacket: NetworkPacket = {
+          id: crypto.randomUUID(),
+          type: 'VOICE_ACK',
+          sender: {
+            userId: this.currentUser.userId,
+            username: this.currentUser.username,
+            avatar: this.currentUser.avatar,
+            connectionType: voiceNote.channel,
+          },
+          recipientId: voiceNote.senderId,
+          payload: { voiceId: voiceNote.voiceId },
+          timestamp: Date.now(),
+        };
+        this.broadcastChannel.postMessage(ackPacket);
+      }
+    } else if (isForMyGroup && packet.payload.groupId) {
+      const gMsg: GroupMessage = {
+        messageId: msgId,
+        groupId: packet.payload.groupId,
+        senderId: voiceNote.senderId,
+        senderName: voiceNote.senderName,
+        senderAvatar: packet.sender.avatar || '',
+        content: `🎙️ Voice Note (${Math.ceil(voiceNote.durationMs / 1000)}s)`,
+        timestamp: voiceNote.timestamp || Date.now(),
+        channel: voiceNote.channel,
+        voiceNote,
+      };
+      await dbEngine.saveGroupMessage(gMsg);
+      this.groupMessageListeners.forEach((fn) => fn(packet.payload.groupId, gMsg));
     }
   }
 }

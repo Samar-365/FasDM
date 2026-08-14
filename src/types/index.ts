@@ -39,6 +39,18 @@ export interface SharedFile {
   escalatedToWifiDirect?: boolean;
 }
 
+export interface VoiceNote {
+  voiceId: string;
+  senderId: string;
+  senderName: string;
+  audioData: string;       // Base64 Data URL (audio/webm or audio/ogg)
+  durationMs: number;      // Duration in milliseconds
+  mimeType: string;        // e.g. 'audio/webm;codecs=opus' or 'audio/ogg;codecs=opus'
+  fileSize: number;        // Size in bytes
+  timestamp: number;
+  channel: TransportChannel;
+}
+
 export interface ChatMessage {
   messageId: string;
   senderId: string;
@@ -48,6 +60,7 @@ export interface ChatMessage {
   status: MessageStatus;
   channel: TransportChannel;
   fileAttachment?: SharedFile;
+  voiceNote?: VoiceNote;
 }
 
 export interface GroupMember {
@@ -79,6 +92,7 @@ export interface GroupMessage {
   timestamp: number;
   channel: TransportChannel;
   fileAttachment?: SharedFile;
+  voiceNote?: VoiceNote;
 }
 
 export type NetworkPacketType = 
@@ -93,7 +107,9 @@ export type NetworkPacketType =
   | 'GROUP_MEMBER_LEAVE'
   | 'GROUP_DELETE'
   | 'FILE_TRANSFER'
-  | 'FILE_ACK';
+  | 'FILE_ACK'
+  | 'VOICE_NOTE'
+  | 'VOICE_ACK';
 
 export interface NetworkPacket {
   id: string;
