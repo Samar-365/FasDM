@@ -382,10 +382,13 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
                     </div>
 
                     <div
-                      className={`max-w-[85%] rounded-2xl px-4 py-2.5 space-y-1 shadow-md text-xs sm:text-sm ${isMe
-                        ? 'bg-blue-600 text-white rounded-br-none'
-                        : 'bg-slate-800 text-slate-100 border border-slate-700/70 rounded-bl-none'
-                        }`}
+                      className={`rounded-2xl space-y-1 shadow-md text-xs sm:text-sm ${
+                        msg.voiceNote ? 'p-1.5 max-w-fit' : 'max-w-[80%] px-4 py-2.5'
+                      } ${
+                        isMe
+                          ? 'bg-blue-600 text-white rounded-br-none'
+                          : 'bg-slate-800 text-slate-100 border border-slate-700/70 rounded-bl-none'
+                      }`}
                     >
                       {/* Text content (hidden if message only contains a voiceNote) */}
                       {(!msg.voiceNote || (msg.content && !msg.content.startsWith('🎙️ Voice Note'))) && (
