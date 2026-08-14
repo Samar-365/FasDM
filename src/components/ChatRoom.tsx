@@ -48,7 +48,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
     async function loadHistory() {
       try {
         const history = await dbEngine.getMessagesForPeer(currentUser.userId, peer.deviceId);
-        // Deduplicate history by messageId or fileAttachment fileId
+        // Deduplicate history by messageId, fileId, or voiceId
         const uniqueHistory = history.filter(
           (msg, index, self) =>
             index ===
@@ -57,7 +57,10 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
                 m.messageId === msg.messageId ||
                 (m.fileAttachment &&
                   msg.fileAttachment &&
-                  m.fileAttachment.fileId === msg.fileAttachment.fileId)
+                  m.fileAttachment.fileId === msg.fileAttachment.fileId) ||
+                (m.voiceNote &&
+                  msg.voiceNote &&
+                  m.voiceNote.voiceId === msg.voiceNote.voiceId)
             )
         );
         setMessages(uniqueHistory);
@@ -89,7 +92,10 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
                 m.messageId === newMsg.messageId ||
                 (m.fileAttachment &&
                   newMsg.fileAttachment &&
-                  m.fileAttachment.fileId === newMsg.fileAttachment.fileId)
+                  m.fileAttachment.fileId === newMsg.fileAttachment.fileId) ||
+                (m.voiceNote &&
+                  newMsg.voiceNote &&
+                  m.voiceNote.voiceId === newMsg.voiceNote.voiceId)
             )
           ) {
             return prev;

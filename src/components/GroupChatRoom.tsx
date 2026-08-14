@@ -81,7 +81,7 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
     async function loadGroupMessages() {
       try {
         const history = await dbEngine.getGroupMessages(selectedGroup!.groupId);
-        // Deduplicate history by messageId or fileAttachment fileId
+        // Deduplicate history by messageId, fileId, or voiceId
         const uniqueHistory = history.filter(
           (msg, index, self) =>
             index ===
@@ -90,7 +90,10 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
                 m.messageId === msg.messageId ||
                 (m.fileAttachment &&
                   msg.fileAttachment &&
-                  m.fileAttachment.fileId === msg.fileAttachment.fileId)
+                  m.fileAttachment.fileId === msg.fileAttachment.fileId) ||
+                (m.voiceNote &&
+                  msg.voiceNote &&
+                  m.voiceNote.voiceId === msg.voiceNote.voiceId)
             )
         );
         setMessages(uniqueHistory);
@@ -110,7 +113,10 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
                 m.messageId === newMsg.messageId ||
                 (m.fileAttachment &&
                   newMsg.fileAttachment &&
-                  m.fileAttachment.fileId === newMsg.fileAttachment.fileId)
+                  m.fileAttachment.fileId === newMsg.fileAttachment.fileId) ||
+                (m.voiceNote &&
+                  newMsg.voiceNote &&
+                  m.voiceNote.voiceId === newMsg.voiceNote.voiceId)
             )
           ) {
             return prev;
