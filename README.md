@@ -1,43 +1,63 @@
 # FasDM Mesh – Decentralized Internet-Free Messaging & Media Transfer
 
-> **FasDM Mesh** is a decentralized, internet-free Peer-to-Peer (P2P) encrypted messaging and media sharing platform. Operating over local physical networks (LAN, Wi-Fi Direct, and Bluetooth LE), FasDM enables nodes to discover nearby devices, establish encrypted P2P mesh links, broadcast group communications, and exchange files without requiring an active internet connection or centralized cloud servers.
+> **FasDM Mesh** is a decentralized, internet-free Peer-to-Peer (P2P) encrypted messaging, voice notes, and media sharing platform. Operating over local physical networks (LAN, Wi-Fi Direct, and Bluetooth LE), FasDM enables nodes to discover nearby devices, establish encrypted P2P mesh links, broadcast group communications, exchange files, and transmit voice messages without requiring an active internet connection or centralized cloud servers.
 
 ---
 
 ## Project Overview
 
-FasDM (Fast & Secure Decentralized Messaging) addresses communication needs in off-grid, emergency, localized, or privacy-sensitive scenarios. Built on modern web standards and P2P browser technologies, FasDM turns any web browser instance into an autonomous mesh node capable of real-time offline discovery, direct messaging, file transfer, and group hub administration.
+FasDM (Fast & Secure Decentralized Messaging) addresses communication needs in off-grid, emergency, localized, or privacy-sensitive scenarios. Built on modern web standards and P2P browser technologies, FasDM turns any web browser instance into an autonomous mesh node capable of real-time offline discovery, direct messaging, voice messaging, file transfer, and group hub administration.
 
 ---
 
-## Key Features & Functional Modules
+## 8 Completed Core Modules & Features
 
-### 1. Decentralized Peer Discovery & Network Scanner
-- **Multi-Transport Support**: Operates over local LAN, Wi-Fi Direct, and Bluetooth channels.
+### 1. User Profile & Cryptographic Identity (Module 1)
+- **Zero-Cloud Identity**: Web Crypto API P-256 ECDH keypair generation & SHA-256 fingerprint creation.
+- **Tab Session Isolation**: Independent session management (`sessionStorage`), allowing multiple node identities to run side-by-side in separate browser windows/tabs.
+
+### 2. Decentralized Peer Discovery & Network Scanner (Module 2)
+- **Multi-Transport Support**: Operates across local LAN, Wi-Fi Direct, and Bluetooth channels.
 - **Real-Time Signal Metrics**: Monitors peer signal strength (RSSI in dBm) and network latency (ms).
-- **Unread Notification Highlights**: Peers with unread messages are highlighted in the nearby devices scanner with glowing borders, notification badges ("Unread Message!"), and instant clearance upon opening the chat room.
+- **Unread Notification Highlights**: Peers with unread messages are highlighted with glowing borders, notification badges ("Unread Message!"), and auto-clearing indicators.
+- **Self-Peer Exclusion**: Smart filtering prevents nodes from discovering themselves as nearby peers.
 
-### 2. Direct P2P Encrypted Messaging
-- **1-to-1 Instant Messaging**: Secure direct messaging with status indicators (Sent, Delivered, Read).
-- **Real-Time Typing Indicators**: Visual typing feedback when peers construct messages.
-- **Quick Reaction Bar**: One-tap quick reaction bar.
-- **Chat History Management**: Clear or view chat logs stored locally.
+### 3. Optical QR Code Pairing (Module 3)
+- **Out-of-Band Pairing**: Dynamic optical QR code generation embedding Node ID, Username, Public Key, and Key Fingerprint.
+- **Identity Verification**: QR modal for identity verification.
 
-### 3. Multi-Node Group Mesh Hub
-- **Group Creation & Administration**: Create P2P mesh groups, invite online nodes, and assign group administrators.
-- **Group Broadcast Messaging**: Broadcast text messages and media attachments to all group members.
-- **Admin Controls**: Delete group channels or manage membership.
+### 4. Direct 1-to-1 Encrypted Messaging (Module 4)
+- **End-to-End Encryption**: Direct peer-to-peer text exchange with payload encryption.
+- **Strict Deduplication**: Message pipelines deduplicate incoming packets by `messageId`, `fileId`, and `voiceId` across browser tabs.
 
-### 4. P2P File & Media Sharing Engine
+### 5. Message Status & Real-Time Indicators (Module 5)
+- **Delivery Receipts**: Sent (single check), Delivered (double check), and Read (cyan double check).
+- **Typing Indicators**: Dynamic real-time typing indicators ("User is typing...").
+- **Quick Reaction Bar**: One-tap emoji reactions.
+
+### 6. Multi-Node Group Mesh Hub (Module 6)
+- **Group Creation & Administration**: Create P2P mesh groups, invite discovered nodes, and assign group administrators.
+- **Group Broadcast Messaging**: Multi-node broadcast messaging over mesh transport.
+- **Admin & Member Controls**: Leave group, remove members, or delete group channels with automatic grid cleanup.
+
+### 7. P2P File Sharing Engine & 3X Media Viewer (Module 7)
 - **Multi-Format Attachment Support**: Share images, videos, audio clips, PDFs, and generic files (up to 25MB).
 - **Automatic Transport Escalation**: Large files (> 5MB) automatically escalate to high-throughput **Wi-Fi Direct** transport for faster transfer.
-- **Inline Compact Previews**: Sleek 120px in-chat thumbnail preview cards for non-intrusive feed viewing.
+- **Inline Compact Thumbnail Cards**: Sleek 120px in-chat thumbnail preview cards for neat timeline feeds.
 - **3X Expanded Media Viewer**: Full-screen modal media viewer with high-definition preview capabilities and immediate download controls.
 
-### 5. Identity & Storage Engine
-- **Cryptographic QR Pairings**: Share public node identity using auto-generated QR codes.
-- **IndexedDB Offline Persistence**: Zero-cloud data persistence storing profile keys, messages, and shared files locally.
-- **Session Isolation**: Tab-level session isolation (`sessionStorage`), allowing multiple node identities to run side-by-side in separate browser windows or tabs.
+### 8. Voice Notes & Audio Messaging (Module 8)
+- **MediaRecorder & Opus Audio Engine**: In-browser microphone capture with auto-detected codec (`audio/webm;codecs=opus`, `audio/ogg;codecs=opus`).
+- **Live Frequency Waveform Visualizer**: Web Audio API (`AudioContext`, `AnalyserNode`) powers a real-time 24-bar pulsating audio waveform during recording.
+- **Instant One-Click Send & Review Modes**:
+  - **Instant Send**: Single-click to stop and transmit voice notes immediately.
+  - **Stop & Review**: Preview recorded audio, check duration, re-record, or send.
+- **Minimal 210px Inline Player**: Ultra-compact in-bubble audio player featuring:
+  - Play/Pause toggle with audio state management.
+  - 20 interactive click-to-seek acoustic waveform visualizer bars.
+  - Dynamic `MM:SS` elapsed/total duration timestamps.
+  - Offline one-click audio download button.
+  - Distinct sender (blue glass) and receiver (slate/cyan) theme styling.
 
 ---
 
@@ -45,6 +65,7 @@ FasDM (Fast & Secure Decentralized Messaging) addresses communication needs in o
 
 - **Frontend Core**: React 19, TypeScript
 - **Build Tooling**: Vite 6
+- **Audio & Media**: Web Audio API (`AudioContext`, `AnalyserNode`), MediaRecorder API, HTML5 Audio
 - **Styling**: Vanilla CSS3, Cyberpunk Dark Mode & Glassmorphism Design System
 - **Icons**: Lucide React
 - **P2P Broadcast Transport**: Web BroadcastChannel API & P2P Service Architecture
@@ -53,7 +74,7 @@ FasDM (Fast & Secure Decentralized Messaging) addresses communication needs in o
 
 ---
 
-## Installation Steps
+## Installation & Setup
 
 ### Prerequisites
 Make sure you have Node.js (v18.0.0 or higher) and `npm` installed on your machine.
@@ -89,11 +110,6 @@ To verify TypeScript compilation and create an optimized production build:
 npm run build
 ```
 
-To preview the production build locally:
-```bash
-npm run preview
-```
-
 ---
 
 ## Operation & Testing Guide
@@ -109,17 +125,18 @@ npm run preview
 3. **Discover Peers**:
    - Both nodes will automatically discover each other over the local P2P mesh channel.
    - Navigate to the **Nearby Devices** tab in either node to view the discovered peer.
-4. **Send Messages & Files**:
+4. **Send Text, Files & Voice Notes**:
    - Click **Start P2P Chat** on a discovered peer card.
-   - Send text messages or click the paperclip icon to send images/files.
-   - If Tab 2 has not opened the chat yet, Tab 2's **Nearby Devices** tab will display a glowing red notification badge ("1 New").
+   - **Text**: Type a message and hit Send.
+   - **Files**: Click the paperclip icon to send images, videos, or documents.
+   - **Voice Notes**: Click the **Mic** button -> speak -> click **Send** for instant transmission, or **Stop** to preview and listen before sending.
 
 ### Scenario B: Single-Tab Simulated Peer Generator
 If you want to test P2P features in a single tab without opening multiple windows:
 1. Go to the **Nearby Devices** tab.
 2. In the **Single-Tab Peer Simulation Generator** bar, click **+ Sim LAN Peer** or **+ Sim Wi-Fi Direct**.
 3. A simulated node (e.g. `Rahul Sharma (LAN)`) will spawn immediately.
-4. Click **Start P2P Chat** to interact with auto-replying simulated peer nodes.
+4. Click **Start P2P Chat** to interact with auto-replying simulated peer nodes (supporting text replies, file transfer ACKs, and voice note acknowledgments).
 
 ---
 
@@ -130,6 +147,7 @@ fasdm/
 ├── public/                  # Static web assets
 ├── src/
 │   ├── components/          # UI Components
+│   │   ├── AudioRecorder.tsx    # MediaRecorder & Live Waveform Bar
 │   │   ├── ChatRoom.tsx         # Direct 1-to-1 P2P Chat Room
 │   │   ├── Dashboard.tsx        # Main Application Navigation & Stats
 │   │   ├── FileViewerModal.tsx  # Full View Media & File Viewer
@@ -137,7 +155,8 @@ fasdm/
 │   │   ├── Navbar.tsx           # Header Navigation Bar
 │   │   ├── PeerScanner.tsx      # Discovered Nearby Devices Grid
 │   │   ├── ProfileSetup.tsx     # Identity Registration Page
-│   │   └── SplashScreen.tsx     # Initial Landing & Welcome Screen
+│   │   ├── SplashScreen.tsx     # Initial Landing & Welcome Screen
+│   │   └── VoiceNotePlayer.tsx  # Compact Inline Audio Player
 │   ├── services/            # Core Engine Services
 │   │   ├── crypto.ts            # WebCrypto Key Generation & QR Payload Formatting
 │   │   ├── db.ts                # IndexedDB Storage Engine
@@ -149,6 +168,7 @@ fasdm/
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts
+├── module_breakdown.txt     # 12-Module Implementation Specifications
 └── README.md
 ```
 
