@@ -1,16 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Play, Pause, Download, Volume2 } from 'lucide-react';
 import { VoiceNote } from '../types';
 
 // ============================================================================
-// SUBMODULE 8.4: Inline Voice Note Audio Player Component
-// ============================================================================
-// Features:
-//   - Play/Pause toggle with seamless HTML5 Audio integration
-//   - Interactive seekable waveform visualization & timeline slider
-//   - Dynamic elapsed / total duration labels (MM:SS)
-//   - Offline audio playback from Base64 Data URL
-//   - Compact download action
+// SUBMODULE 8.4: Minimal & Compact Inline Voice Note Player
 // ============================================================================
 
 interface VoiceNotePlayerProps {
@@ -18,8 +11,8 @@ interface VoiceNotePlayerProps {
   isSelf?: boolean;
 }
 
-// Generate a deterministic pseudo-waveform pattern from voiceId
-function generateWaveformPattern(seed: string, count: number = 28): number[] {
+// Generate deterministic mini waveform bar heights (4px to 16px)
+function generateWaveformPattern(seed: string, count: number = 20): number[] {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
     hash = (hash << 5) - hash + seed.charCodeAt(i);
@@ -28,9 +21,8 @@ function generateWaveformPattern(seed: string, count: number = 28): number[] {
 
   const heights: number[] = [];
   for (let i = 0; i < count; i++) {
-    const pseudoRandom = Math.abs(Math.sin(hash + i * 1.7));
-    // Height between 4px and 24px with nice rhythm
-    const height = Math.round(5 + pseudoRandom * 19);
+    const pseudoRandom = Math.abs(Math.sin(hash + i * 1.8));
+    const height = Math.round(4 + pseudoRandom * 12); // 4px to 16px
     heights.push(height);
   }
   return heights;
@@ -43,17 +35,17 @@ export const VoiceNotePlayer: React.FC<VoiceNotePlayerProps> = ({ voiceNote, isS
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const waveformHeights = useRef<number[]>(
-    generateWaveformPattern(voiceNote.voiceId || voiceNote.timestamp.toString())
+    generateWaveformPattern(voiceNote.voiceId || voiceNote.timestamp.toString(), 20)
   );
 
-  // Sync duration if loaded metadata yields better duration
   const handleLoadedMetadata = () => {
     if (audioRef.current && !isNaN(audioRef.current.duration) && isFinite(audioRef.current.duration)) {
       setDuration(audioRef.current.duration);
     }
   };
 
-  const togglePlay = () => {
+  const togglePlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!audioRef.current) return;
 
     if (isPlaying) {
@@ -64,7 +56,7 @@ export const VoiceNotePlayer: React.FC<VoiceNotePlayerProps> = ({ voiceNote, isS
         .play()
         .then(() => setIsPlaying(true))
         .catch((err) => {
-          console.warn('Audio playback prevented:', err);
+          console.warn('Playback prevented:', err);
           setIsPlaying(false);
         });
     }
@@ -84,16 +76,9 @@ export const VoiceNotePlayer: React.FC<VoiceNotePlayerProps> = ({ voiceNote, isS
     }
   };
 
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTime = parseFloat(e.target.value);
-    setCurrentTime(newTime);
-    if (audioRef.current) {
-      audioRef.current.currentTime = newTime;
-    }
-  };
-
-  const handleWaveformClick = (index: number) => {
-    const ratio = index / waveformHeights.current.length;
+  const handleWaveformClick = (e: React.MouseEvent, index: number) => {
+    e.stopPropagation();
+    const ratio = (index + 0.5) / waveformHeights.current.length;
     const targetTime = ratio * (duration || 1);
     setCurrentTime(targetTime);
     if (audioRef.current) {
@@ -102,7 +87,7 @@ export const VoiceNotePlayer: React.FC<VoiceNotePlayerProps> = ({ voiceNote, isS
   };
 
   const formatTime = (seconds: number): string => {
-    if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
+    if (isNaN(seconds) || !isFinite(seconds) || seconds < 0) return '0:00';
     const m = Math.floor(seconds / 60);
     const s = Math.floor(seconds % 60);
     return `${m}:${s.toString().padStart(2, '0')}`;
@@ -112,13 +97,21 @@ export const VoiceNotePlayer: React.FC<VoiceNotePlayerProps> = ({ voiceNote, isS
 
   return (
     <div
-      className={`rounded-xl p-2.5 my-1 select-none flex flex-col gap-2 max-w-[280px] sm:max-w-[320px] transition ${
-        isSelf
-          ? 'bg-blue-700/70 border border-blue-400/40 text-white'
-          : 'bg-slate-900/90 border border-slate-700/80 text-slate-100'
-      }`}
+      style={{
+        width: '210px',
+        maxWidth: '210px',
+        padding: '6px 8px',
+        borderRadius: '10px',
+        background: isSelf ? 'rgba(30, 58, 138, 0.5)' : '#090d16',
+        border: isSelf ? '1px solid rgba(96, 165, 250, 0.35)' : '1px solid #1e293b',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
+        userSelect: 'none',
+        overflow: 'hidden',
+      }}
     >
-      {/* Hidden native audio element */}
+      {/* Hidden audio element */}
       <audio
         ref={audioRef}
         src={voiceNote.audioData}
@@ -128,28 +121,47 @@ export const VoiceNotePlayer: React.FC<VoiceNotePlayerProps> = ({ voiceNote, isS
         preload="metadata"
       />
 
-      {/* Top row: Play Button + Waveform scrubber */}
-      <div className="flex items-center gap-2.5">
+      {/* Row 1: Play/Pause Button + Waveform scrubber */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         {/* Play/Pause Button */}
         <button
           type="button"
           onClick={togglePlay}
-          className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition transform active:scale-95 shadow-md ${
-            isSelf
-              ? 'bg-white text-blue-700 hover:bg-blue-50'
-              : 'bg-cyan-500 text-slate-950 hover:bg-cyan-400'
-          }`}
-          title={isPlaying ? 'Pause' : 'Play Voice Note'}
+          style={{
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            border: 'none',
+            background: isSelf ? '#ffffff' : '#00e5ff',
+            color: isSelf ? '#1d4ed8' : '#020617',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            flexShrink: 0,
+            transition: 'transform 0.1s ease',
+          }}
+          title={isPlaying ? 'Pause' : 'Play'}
         >
           {isPlaying ? (
-            <Pause size={15} fill="currentColor" />
+            <Pause size={12} fill="currentColor" />
           ) : (
-            <Play size={15} fill="currentColor" className="ml-0.5" />
+            <Play size={12} fill="currentColor" style={{ marginLeft: '1px' }} />
           )}
         </button>
 
-        {/* Waveform Visualization Bars */}
-        <div className="flex-1 flex items-center justify-between gap-[2px] h-7 px-1 cursor-pointer relative group">
+        {/* 20 Clickable Waveform Bars */}
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '2px',
+            height: '20px',
+            cursor: 'pointer',
+          }}
+        >
           {waveformHeights.current.map((h, i) => {
             const barProgress = (i / waveformHeights.current.length) * 100;
             const isPassed = barProgress <= progressPercent;
@@ -157,20 +169,34 @@ export const VoiceNotePlayer: React.FC<VoiceNotePlayerProps> = ({ voiceNote, isS
             return (
               <div
                 key={i}
-                onClick={() => handleWaveformClick(i)}
-                className="flex-1 flex items-center justify-center h-full group-hover:opacity-100 transition"
+                onClick={(e) => handleWaveformClick(e, i)}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '100%',
+                }}
               >
                 <div
-                  className={`w-[2.5px] rounded-full transition-all duration-100 ${
-                    isPassed
+                  style={{
+                    width: '3px',
+                    height: `${h}px`,
+                    borderRadius: '2px',
+                    backgroundColor: isPassed
                       ? isSelf
-                        ? 'bg-white shadow-[0_0_4px_rgba(255,255,255,0.8)]'
-                        : 'bg-cyan-400 shadow-[0_0_4px_rgba(34,211,238,0.8)]'
+                        ? '#ffffff'
+                        : '#00e5ff'
                       : isSelf
-                      ? 'bg-blue-300/40 hover:bg-blue-200'
-                      : 'bg-slate-700 hover:bg-slate-500'
-                  }`}
-                  style={{ height: `${h}px` }}
+                      ? 'rgba(191, 219, 254, 0.35)'
+                      : '#334155',
+                    boxShadow: isPassed
+                      ? isSelf
+                        ? '0 0 4px rgba(255, 255, 255, 0.6)'
+                        : '0 0 4px rgba(0, 229, 255, 0.6)'
+                      : 'none',
+                    transition: 'all 0.08s ease',
+                  }}
                 />
               </div>
             );
@@ -178,44 +204,45 @@ export const VoiceNotePlayer: React.FC<VoiceNotePlayerProps> = ({ voiceNote, isS
         </div>
       </div>
 
-      {/* Hidden range input for fine scrub control */}
-      <input
-        type="range"
-        min="0"
-        max={duration || 0}
-        step="0.05"
-        value={currentTime}
-        onChange={handleSeek}
-        className="w-full h-1 bg-transparent appearance-none cursor-pointer opacity-0 absolute pointer-events-none"
-        tabIndex={-1}
-      />
-
-      {/* Bottom row: Timestamps + Download */}
-      <div className="flex items-center justify-between text-[10px] font-mono opacity-85 px-0.5">
-        <div className="flex items-center gap-1.5">
-          <Volume2 size={11} className={isPlaying ? 'animate-pulse text-cyan-300' : ''} />
+      {/* Row 2: Compact time + Download */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: '9px',
+          fontFamily: 'monospace',
+          color: isSelf ? '#bfdbfe' : '#94a3b8',
+          paddingTop: '2px',
+          borderTop: isSelf ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid #1e293b',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+          <Volume2 size={10} style={{ opacity: isPlaying ? 1 : 0.6 }} />
           <span>
             {formatTime(currentTime)} / {formatTime(duration)}
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          {voiceNote.fileSize && (
-            <span className="opacity-70">
-              {(voiceNote.fileSize / 1024).toFixed(0)} KB
-            </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {voiceNote.fileSize > 0 && (
+            <span>{(voiceNote.fileSize / 1024).toFixed(0)} KB</span>
           )}
           <a
             href={voiceNote.audioData}
-            download={`voice_${voiceNote.voiceId.slice(0, 8)}.${
+            download={`voice_${(voiceNote.voiceId || 'audio').slice(0, 8)}.${
               voiceNote.mimeType?.includes('ogg') ? 'ogg' : 'webm'
             }`}
-            className={`p-1 rounded transition ${
-              isSelf ? 'hover:bg-blue-600' : 'hover:bg-slate-800 text-slate-300'
-            }`}
+            style={{
+              color: isSelf ? '#ffffff' : '#00e5ff',
+              display: 'flex',
+              alignItems: 'center',
+              textDecoration: 'none',
+              opacity: 0.85,
+            }}
             title="Download Voice Note"
           >
-            <Download size={11} />
+            <Download size={10} />
           </a>
         </div>
       </div>
