@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { UserProfile, GroupChat, GroupMessage, PeerDevice, TransportChannel, SharedFile, VoiceNote } from '../types';
 import { AudioRecorder } from './AudioRecorder';
+import { VoiceNotePlayer } from './VoiceNotePlayer';
 import { networkService } from '../services/network';
 import { dbEngine } from '../services/db';
 import {
@@ -394,12 +395,20 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
                     </div>
 
                     <div
-                      className={`max-w-[80%] rounded-2xl px-4 py-2.5 space-y-1 shadow-md text-xs sm:text-sm ${isMe
+                      className={`max-w-[85%] rounded-2xl px-4 py-2.5 space-y-1 shadow-md text-xs sm:text-sm ${isMe
                         ? 'bg-blue-600 text-white rounded-br-none'
                         : 'bg-slate-800 text-slate-100 border border-slate-700/70 rounded-bl-none'
                         }`}
                     >
-                      <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
+                      {/* Text content (hidden if message only contains a voiceNote) */}
+                      {(!msg.voiceNote || (msg.content && !msg.content.startsWith('🎙️ Voice Note'))) && (
+                        <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
+                      )}
+
+                      {/* Inline Group Voice Note Player (Submodule 8.4) */}
+                      {msg.voiceNote && (
+                        <VoiceNotePlayer voiceNote={msg.voiceNote} isSelf={isMe} />
+                      )}
 
                       {/* Inline Group File Attachment / Image Thumbnail Card */}
                       {msg.fileAttachment && (
