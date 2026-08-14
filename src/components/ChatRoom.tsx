@@ -209,42 +209,25 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
     reader.readAsDataURL(file);
   };
 
-  // ── Voice Note Send Handler (Submodule 8.3) ──────────────────────────────
+  // ── Voice Note Send Handler (Submodules 8.3 & 8.5) ───────────────────────
   const handleVoiceNoteSend = async (
     audioData: string,
     durationMs: number,
     mimeType: string,
     fileSize: number
   ) => {
-    const voiceId = `voice_${crypto.randomUUID()}`;
-    const messageId = crypto.randomUUID();
-
-    const voiceNote: VoiceNote = {
-      voiceId,
-      senderId: currentUser.userId,
-      senderName: currentUser.username,
-      audioData,
-      durationMs,
-      mimeType,
-      fileSize,
-      timestamp: Date.now(),
-      channel: activeChannel,
-    };
-
-    const chatMsg: ChatMessage = {
-      messageId,
-      senderId: currentUser.userId,
-      receiverId: peer.deviceId,
-      content: `🎙️ Voice Note (${Math.ceil(durationMs / 1000)}s)`,
-      timestamp: Date.now(),
-      status: 'sent',
-      channel: activeChannel,
-      voiceNote,
-    };
-
-    await dbEngine.saveMessage(chatMsg);
-    setMessages((prev) => [...prev, chatMsg]);
-    setIsRecording(false);
+    try {
+      await networkService.sendVoiceNote(
+        { peer },
+        { audioData, durationMs, mimeType, fileSize },
+        activeChannel
+      );
+    } catch (err) {
+      console.error('Failed to send voice note:', err);
+      alert('Failed to transmit voice note over P2P mesh');
+    } finally {
+      setIsRecording(false);
+    }
   };
 
   return (

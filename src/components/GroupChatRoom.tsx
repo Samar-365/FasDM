@@ -235,7 +235,7 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
     reader.readAsDataURL(file);
   };
 
-  // ── Group Voice Note Send Handler (Submodule 8.3) ─────────────────────────
+  // ── Group Voice Note Send Handler (Submodules 8.3 & 8.5) ─────────────────
   const handleVoiceNoteSend = async (
     audioData: string,
     durationMs: number,
@@ -244,36 +244,17 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
   ) => {
     if (!selectedGroup) return;
 
-    const voiceId = `voice_${crypto.randomUUID()}`;
-    const messageId = crypto.randomUUID();
-
-    const voiceNote: VoiceNote = {
-      voiceId,
-      senderId: currentUser.userId,
-      senderName: currentUser.username,
-      audioData,
-      durationMs,
-      mimeType,
-      fileSize,
-      timestamp: Date.now(),
-      channel: 'LAN',
-    };
-
-    const groupMsg: GroupMessage = {
-      messageId,
-      groupId: selectedGroup.groupId,
-      senderId: currentUser.userId,
-      senderName: currentUser.username,
-      senderAvatar: currentUser.avatar,
-      content: `🎙️ Voice Note (${Math.ceil(durationMs / 1000)}s)`,
-      timestamp: Date.now(),
-      channel: 'LAN',
-      voiceNote,
-    };
-
-    await dbEngine.saveGroupMessage(groupMsg);
-    setMessages((prev) => [...prev, groupMsg]);
-    setIsRecording(false);
+    try {
+      await networkService.sendVoiceNote(
+        { groupId: selectedGroup.groupId },
+        { audioData, durationMs, mimeType, fileSize }
+      );
+    } catch (err) {
+      console.error('Failed to send group voice note:', err);
+      alert('Failed to transmit voice note across group mesh');
+    } finally {
+      setIsRecording(false);
+    }
   };
 
   const isAdmin = selectedGroup?.adminId === currentUser.userId;
