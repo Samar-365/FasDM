@@ -13,6 +13,7 @@ import { networkService } from '../services/network';
 import { dbEngine } from '../services/db';
 import { SharedWhiteboard } from './collaboration/SharedWhiteboard';
 import { SharedChecklist } from './collaboration/SharedChecklist';
+import { SharedStickyNotes } from './collaboration/SharedStickyNotes';
 import {
   PenTool,
   CheckSquare,
@@ -500,22 +501,14 @@ export const CollaborationHub: React.FC<CollaborationHubProps> = ({
           />
         )}
 
-        {/* Sticky Notes Workspace Placeholder / Component */}
+        {/* Sticky Notes Workspace Component */}
         {activeTab === 'notes' && (
-          <div className="w-full h-full flex flex-col items-center justify-center min-h-[540px] text-center p-6 border-2 border-dashed border-purple-500/20 rounded-xl bg-purple-950/10">
-            <div className="w-16 h-16 rounded-2xl bg-purple-900/40 border border-purple-500/40 flex items-center justify-center text-purple-400 shadow-[0_0_25px_rgba(168,85,247,0.3)] mb-4">
-              <StickyIcon size={32} className="animate-bounce" />
-            </div>
-            <h3 className="text-lg font-bold text-white tracking-wide">Collaborative Sticky Notes Board</h3>
-            <p className="text-slate-400 text-xs max-w-md mt-1.5 mb-6">
-              Interactive 2D drag-and-drop workspace for movable sticky notes with cyberpunk pastel palettes, concurrency edit locks, pin-to-top, and instant mesh delta replication.
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-2 font-mono text-[11px] text-purple-300">
-              <span className="px-2.5 py-1 rounded-lg bg-purple-950/80 border border-purple-500/30">Submodule 10.5 Engine</span>
-              <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-slate-300">COLLAB_STICKY_ACTION</span>
-              <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-slate-300">2D Board Space</span>
-            </div>
-          </div>
+          <SharedStickyNotes
+            profile={profile}
+            sessionId={selectedSessionId}
+            sessionType={sessionType}
+            onNotesCountChange={setNotesCount}
+          />
         )}
       </div>
     </div>
