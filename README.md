@@ -1,142 +1,173 @@
 # FasDM Mesh – Decentralized Internet-Free Messaging & Media Transfer
 
-> **FasDM Mesh** is a decentralized, internet-free Peer-to-Peer (P2P) encrypted messaging, voice notes, and media sharing platform. Operating over local physical networks (LAN, Wi-Fi Direct, and Bluetooth LE), FasDM enables nodes to discover nearby devices, establish encrypted P2P mesh links, broadcast group communications, exchange files, and transmit voice messages without requiring an active internet connection or centralized cloud servers.
+> **FasDM Mesh** is a decentralized, internet-free Peer-to-Peer (P2P) encrypted messaging, voice notes, media sharing, and real-time collaboration platform. Operating over local physical networks (LAN, Wi-Fi Direct, and Bluetooth LE), FasDM enables nodes to discover nearby devices, establish encrypted P2P mesh links, broadcast group communications, exchange files, transmit voice messages, and collaborate on shared whiteboards, checklists, and sticky notes without requiring an active internet connection or centralized cloud servers.
 
 ---
 
-## Project Overview
+## Project Highlights
 
-FasDM (Fast & Secure Decentralized Messaging) addresses communication needs in off-grid, emergency, localized, or privacy-sensitive scenarios. Built on modern web standards and P2P browser technologies, FasDM turns any web browser instance into an autonomous mesh node capable of real-time offline discovery, direct messaging, voice messaging, file transfer, and group hub administration.
+- **Zero-Cloud Cryptographic Identity**: In-browser P-256 ECDH keypair generation with SHA-256 fingerprint verification and optical QR pairing.
+- **Multi-Transport P2P Discovery**: Autonomous local device discovery and beaconing across LAN, Wi-Fi Direct, and Bluetooth channels with signal metrics (RSSI, latency).
+- **Encrypted 1-to-1 & Group Messaging**: End-to-end payload encryption, delivery receipts (Sent, Delivered, Read), live typing indicators, and emoji reactions.
+- **High-Speed File Sharing & 3X Media Viewer**: Support for images, videos, audio, PDFs, and generic files with automatic transport escalation to Wi-Fi Direct (> 5MB) and a full-screen 3X modal viewer.
+- **Voice Notes & Waveform Engine**: MediaRecorder & Opus audio engine with real-time 24-bar Web Audio API visualizer, instant transmission, preview mode, and ultra-compact 210px seekable inline player.
+- **Real-Time Collaboration Suite**: Shared Whiteboard canvas with multi-device normalized scaling, interactive shared task checklists, and freeform draggable sticky notes.
+- **Offline-First Persistence**: IndexedDB (Schema v4) database engine providing reliable offline history, cross-reboot storage, and session isolation.
 
 ---
 
-## 8 Completed Core Modules & Features
+## 12-Module System Status & Architecture
 
-### 1. User Profile & Cryptographic Identity (Module 1)
-- **Zero-Cloud Identity**: Web Crypto API P-256 ECDH keypair generation & SHA-256 fingerprint creation.
-- **Tab Session Isolation**: Independent session management (`sessionStorage`), allowing multiple node identities to run side-by-side in separate browser windows/tabs.
-
-### 2. Decentralized Peer Discovery & Network Scanner (Module 2)
-- **Multi-Transport Support**: Operates across local LAN, Wi-Fi Direct, and Bluetooth channels.
-- **Real-Time Signal Metrics**: Monitors peer signal strength (RSSI in dBm) and network latency (ms).
-- **Unread Notification Highlights**: Peers with unread messages are highlighted with glowing borders, notification badges ("Unread Message!"), and auto-clearing indicators.
-- **Self-Peer Exclusion**: Smart filtering prevents nodes from discovering themselves as nearby peers.
-
-### 3. Optical QR Code Pairing (Module 3)
-- **Out-of-Band Pairing**: Dynamic optical QR code generation embedding Node ID, Username, Public Key, and Key Fingerprint.
-- **Identity Verification**: QR modal for identity verification.
-
-### 4. Direct 1-to-1 Encrypted Messaging (Module 4)
-- **End-to-End Encryption**: Direct peer-to-peer text exchange with payload encryption.
-- **Strict Deduplication**: Message pipelines deduplicate incoming packets by `messageId`, `fileId`, and `voiceId` across browser tabs.
-
-### 5. Message Status & Real-Time Indicators (Module 5)
-- **Delivery Receipts**: Sent (single check), Delivered (double check), and Read (cyan double check).
-- **Typing Indicators**: Dynamic real-time typing indicators ("User is typing...").
-- **Quick Reaction Bar**: One-tap emoji reactions.
-
-### 6. Multi-Node Group Mesh Hub (Module 6)
-- **Group Creation & Administration**: Create P2P mesh groups, invite discovered nodes, and assign group administrators.
-- **Group Broadcast Messaging**: Multi-node broadcast messaging over mesh transport.
-- **Admin & Member Controls**: Leave group, remove members, or delete group channels with automatic grid cleanup.
-
-### 7. P2P File Sharing Engine & 3X Media Viewer (Module 7)
-- **Multi-Format Attachment Support**: Share images, videos, audio clips, PDFs, and generic files (up to 25MB).
-- **Automatic Transport Escalation**: Large files (> 5MB) automatically escalate to high-throughput **Wi-Fi Direct** transport for faster transfer.
-- **Inline Compact Thumbnail Cards**: Sleek 120px in-chat thumbnail preview cards for neat timeline feeds.
-- **3X Expanded Media Viewer**: Full-screen modal media viewer with high-definition preview capabilities and immediate download controls.
-
-### 8. Voice Notes & Audio Messaging (Module 8)
-- **MediaRecorder & Opus Audio Engine**: In-browser microphone capture with auto-detected codec (`audio/webm;codecs=opus`, `audio/ogg;codecs=opus`).
-- **Live Frequency Waveform Visualizer**: Web Audio API (`AudioContext`, `AnalyserNode`) powers a real-time 24-bar pulsating audio waveform during recording.
-- **Instant One-Click Send & Review Modes**:
-  - **Instant Send**: Single-click to stop and transmit voice notes immediately.
-  - **Stop & Review**: Preview recorded audio, check duration, re-record, or send.
-- **Minimal 210px Inline Player**: Ultra-compact in-bubble audio player featuring:
-  - Play/Pause toggle with audio state management.
-  - 20 interactive click-to-seek acoustic waveform visualizer bars.
-  - Dynamic `MM:SS` elapsed/total duration timestamps.
-  - Offline one-click audio download button.
-  - Distinct sender (blue glass) and receiver (slate/cyan) theme styling.
+| Module | SRS Mapping | Description | Status |
+| :--- | :--- | :--- | :---: |
+| **Module 1: User Profile & Identity** | FR-1, FR-15 | User handles, avatars, Web Crypto P-256 ECDH keys & SHA-256 fingerprints | Completed |
+| **Module 2: Device Discovery & Scanner** | FR-2 | Multi-transport peer scanning, RSSI metrics, unread notification badges | Completed |
+| **Module 3: Optical QR Code Pairing** | FR-3 | Out-of-band QR identity exchange & fingerprint verification modal | Completed |
+| **Module 4: One-to-One Encrypted Chat** | FR-4, FR-15 | Direct P2P encrypted text messaging, packet deduplication & delivery ticks | Completed |
+| **Module 5: Message Status & Typing** | FR-8, FR-9 | Sent/Delivered/Read receipts, live typing status, quick emoji reaction bar | Completed |
+| **Module 6: Multi-Node Group Mesh Hub** | FR-5 | P2P group mesh rooms, member invitations, admin rights & group broadcast | Completed |
+| **Module 7: P2P File Sharing & 3X Viewer** | FR-6 | Multi-format file transfer, auto Wi-Fi Direct escalation & 3X expanded viewer | Completed |
+| **Module 8: Voice Notes & Audio Engine** | FR-7 | Opus audio recording, 24-bar live visualizer, 210px inline seekable player | Completed |
+| **Module 9: Emergency Broadcast System** | FR-10 | Priority emergency broadcast alerts & instant alert push | Pending |
+| **Module 10: Shared Collaboration Suite** | FR-11, 12, 13 | Real-time Whiteboard, Task Checklist & Draggable Sticky Notes | Completed |
+| **Module 11: Local Storage Engine** | FR-14 | IndexedDB Schema v4 persistence, storage quota monitor & state hydration | Completed |
+| **Module 12: Mesh Routing Engine** | FR-16, FR-17 | Multi-hop routing overlay & dynamic transport auto-selection | In Progress |
 
 ---
 
 ## Technology Stack
 
 - **Frontend Core**: React 19, TypeScript
-- **Build Tooling**: Vite 6
-- **Audio & Media**: Web Audio API (`AudioContext`, `AnalyserNode`), MediaRecorder API, HTML5 Audio
-- **Styling**: Vanilla CSS3, Cyberpunk Dark Mode & Glassmorphism Design System
+- **Build Tooling & Dev Server**: Vite 6 (`host: true` enabled for LAN broadcasting)
+- **Audio & Media**: Web Audio API (`AudioContext`, `AnalyserNode`), MediaRecorder API (Opus/WebM/Ogg), HTML5 Audio
+- **Canvas & Graphics**: HTML5 2D Canvas API (quadratic Bezier smoothing, normalized scaling)
+- **Styling**: Vanilla CSS3, Cyberpunk Dark Mode & Glassmorphism Design Tokens
 - **Icons**: Lucide React
-- **P2P Broadcast Transport**: Web BroadcastChannel API & P2P Service Architecture
-- **Offline Persistence**: Browser IndexedDB (`dbEngine`) & `sessionStorage`
-- **Cryptography & Utilities**: WebCrypto API, `qrcode`, `canvas-confetti`
+- **P2P Transport Simulation**: Web BroadcastChannel API & Service Worker Mesh Engine
+- **Offline Persistence**: Browser IndexedDB (`dbEngine` v4) & `sessionStorage`
+- **Cryptography & QR**: WebCrypto API, `qrcode`, `canvas-confetti`
 
 ---
 
-## Installation & Setup
+## Setup & Installation on Another Device
+
+You can set up and run FasDM on another computer (Windows, macOS, Linux) or access it seamlessly from mobile devices over your local network.
 
 ### Prerequisites
-Make sure you have Node.js (v18.0.0 or higher) and `npm` installed on your machine.
 
-- Node.js: `node -v`
-- NPM: `npm -v`
+- **Node.js**: Version 18.0.0 or higher ([Download Node.js LTS](https://nodejs.org/))
+- **Package Manager**: `npm` (comes bundled with Node.js) or `yarn` / `pnpm`
+- **Git**: (Optional, if cloning via repository) ([Download Git](https://git-scm.com/))
+- **Modern Browser**: Chrome, Edge, Firefox, Brave, or Safari (must support Web Crypto, IndexedDB, and Web Audio APIs)
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/Samar-365/FasDM.git
-cd FasDM
-```
+---
 
-### 2. Install Dependencies
-```bash
-npm install
-```
+### Method 1: Clean Installation via Git (Online / Connected Device)
 
-### 3. Start the Development Server
-```bash
-npm run dev
-```
+Follow these steps to set up FasDM on a new device with internet access:
 
-The application will start locally at:
-```text
-  ➜  Local:   http://localhost:3000/
-  ➜  Network: http://<your-local-ip>:3000/
-```
+1. **Clone the Repository**:
+   ```bash
+   git clone https://github.com/Samar-365/FasDM.git
+   cd FasDM
+   ```
 
-### 4. Build for Production (Optional)
-To verify TypeScript compilation and create an optimized production build:
-```bash
-npm run build
-```
+2. **Install Project Dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Start the Development Server**:
+   ```bash
+   npm run dev
+   ```
+
+4. **Open in Your Browser**:
+   Open your browser and navigate to:
+   ```text
+   http://localhost:3000/
+   ```
+
+---
+
+### Method 2: Offline / Air-Gapped Setup via USB Drive (No Internet Required)
+
+For emergency or offline environments where the target device cannot access the internet:
+
+1. **Prepare the Package on the Source Device**:
+   - Make sure `npm install` and `npm run build` have been executed on the source machine.
+   - Copy the entire project folder (including `node_modules` or `dist/`) to a USB flash drive or portable storage device.
+
+2. **Transfer to the Target Device**:
+   - Plug the USB drive into the target device and copy the `fasdm` folder to your local drive (e.g. `C:\Projects\fasdm` or `~/projects/fasdm`).
+
+3. **Launch the Application**:
+   - Open a terminal or command prompt inside the transferred folder:
+     ```bash
+     npm run dev
+     ```
+   - *Alternatively*, if serving the static production build:
+     ```bash
+     npx vite preview --host
+     ```
+   - Open `http://localhost:3000/` in any modern web browser.
+
+---
+
+### Method 3: Access from Mobile Phones, Tablets & Laptops on the Same Network
+
+Because the Vite dev server is pre-configured with `host: true`, any device connected to the same Wi-Fi router, mobile hotspot, or local network switch can access FasDM without installing Node.js:
+
+1. **Find the Host Computer's Local IP Address**:
+   - **Windows**: Open Command Prompt and run `ipconfig` (look for `IPv4 Address`, e.g., `192.168.1.15`).
+   - **macOS / Linux**: Open Terminal and run `ifconfig` or `ip a` (look for `inet 192.168.x.x`).
+
+2. **Start the Server on the Host Machine**:
+   ```bash
+   npm run dev
+   ```
+   The terminal will display:
+   ```text
+     ➜  Local:   http://localhost:3000/
+     ➜  Network: http://192.168.1.15:3000/
+   ```
+
+3. **Connect from Other Devices**:
+   - Connect your phone, tablet, or secondary laptop to the same Wi-Fi / Hotspot network.
+   - Open the mobile browser (Chrome / Safari / Firefox) and type the Network URL:
+     ```text
+     http://192.168.1.15:3000/
+     ```
+   - Create your node profile and begin instant P2P communication!
+
+> [!TIP]
+> **Firewall Troubleshooting**: If the page does not load from other devices on the LAN, ensure that port `3000` is allowed in Windows Defender Firewall or your OS security settings.
 
 ---
 
 ## Operation & Testing Guide
 
-### Scenario A: Multi-Node Testing in Separate Tabs/Windows
-1. **Open Tab 1**: Navigate to `http://localhost:3000/`.
+### Scenario A: Multi-Node Testing on a Single Machine (Tabs / Windows)
+1. **Open Node 1**: Navigate to `http://localhost:3000/`.
    - Click **Get Started** on the Splash Screen.
-   - Enter node handle (e.g. `Samar`) and pick an avatar.
+   - Enter handle (e.g., `Node-Alpha`) and choose an avatar.
    - Click **Create P2P Identity & Launch Node**.
-2. **Open Tab 2**: Open a second browser tab or private window at `http://localhost:3000/`.
-   - Tab 2 starts fresh on the Splash Screen.
-   - Click **Get Started** and register a second node handle (e.g. `Priya`).
-3. **Discover Peers**:
-   - Both nodes will automatically discover each other over the local P2P mesh channel.
-   - Navigate to the **Nearby Devices** tab in either node to view the discovered peer.
-4. **Send Text, Files & Voice Notes**:
-   - Click **Start P2P Chat** on a discovered peer card.
-   - **Text**: Type a message and hit Send.
-   - **Files**: Click the paperclip icon to send images, videos, or documents.
-   - **Voice Notes**: Click the **Mic** button -> speak -> click **Send** for instant transmission, or **Stop** to preview and listen before sending.
+2. **Open Node 2**: Open an Incognito Window or separate browser window at `http://localhost:3000/`.
+   - Register a second handle (e.g., `Node-Beta`).
+3. **P2P Discovery**:
+   - Go to **Nearby Devices**; both nodes will automatically detect each other over local channels.
+4. **Chat & Media Transfer**:
+   - Click **Start P2P Chat**.
+   - Send encrypted messages, voice notes with live waveforms, or share files up to 25MB.
+5. **Collaboration Hub**:
+   - Click **Collab Hub** in the header or dashboard to collaborate in real time on the **Shared Whiteboard**, **Interactive Checklist**, and **Sticky Notes Board**.
 
 ### Scenario B: Single-Tab Simulated Peer Generator
-If you want to test P2P features in a single tab without opening multiple windows:
-1. Go to the **Nearby Devices** tab.
-2. In the **Single-Tab Peer Simulation Generator** bar, click **+ Sim LAN Peer** or **+ Sim Wi-Fi Direct**.
-3. A simulated node (e.g. `Rahul Sharma (LAN)`) will spawn immediately.
-4. Click **Start P2P Chat** to interact with auto-replying simulated peer nodes (supporting text replies, file transfer ACKs, and voice note acknowledgments).
+If you want to test all features in a single window without opening multiple tabs:
+1. Open the **Nearby Devices** tab.
+2. In the **Single-Tab Peer Simulation Generator**, click **+ Sim LAN Peer** or **+ Sim Wi-Fi Direct**.
+3. A responsive simulated peer (e.g., `Rahul Sharma (LAN)`) will appear.
+4. Open the chat to receive automated text, file transmission ACKs, and audio responses.
 
 ---
 
@@ -144,37 +175,53 @@ If you want to test P2P features in a single tab without opening multiple window
 
 ```text
 fasdm/
-├── public/                  # Static web assets
+├── public/                     # Static web assets
 ├── src/
-│   ├── components/          # UI Components
-│   │   ├── AudioRecorder.tsx    # MediaRecorder & Live Waveform Bar
-│   │   ├── ChatRoom.tsx         # Direct 1-to-1 P2P Chat Room
-│   │   ├── Dashboard.tsx        # Main Application Navigation & Stats
-│   │   ├── FileViewerModal.tsx  # Full View Media & File Viewer
-│   │   ├── GroupChatRoom.tsx    # Multi-node Group Hub & Admin Controls
-│   │   ├── Navbar.tsx           # Header Navigation Bar
-│   │   ├── PeerScanner.tsx      # Discovered Nearby Devices Grid
-│   │   ├── ProfileSetup.tsx     # Identity Registration Page
-│   │   ├── SplashScreen.tsx     # Initial Landing & Welcome Screen
-│   │   └── VoiceNotePlayer.tsx  # Compact Inline Audio Player
-│   ├── services/            # Core Engine Services
-│   │   ├── crypto.ts            # WebCrypto Key Generation & QR Payload Formatting
-│   │   ├── db.ts                # IndexedDB Storage Engine
-│   │   └── network.ts           # P2P Mesh Transport Engine (BroadcastChannel/Channels)
-│   ├── types/               # TypeScript Type Definitions
-│   ├── App.tsx              # Main Router Component
-│   ├── main.tsx             # Application Entry Point
-│   └── index.css            # Cyberpunk Design System & Styling
+│   ├── components/             # UI Components
+│   │   ├── collaboration/      # Real-Time Shared Collaboration Suite
+│   │   │   ├── SharedChecklist.tsx   # Interactive Task Matrix & Progress Meter
+│   │   │   ├── SharedStickyNotes.tsx # Freeform Draggable Sticky Notes Board
+│   │   │   └── SharedWhiteboard.tsx  # HTML5 Canvas Synchronized Whiteboard
+│   │   ├── AudioRecorder.tsx   # MediaRecorder, Web Audio Analyser & Waveform
+│   │   ├── ChatRoom.tsx        # Direct 1-to-1 P2P Encrypted Chat Room
+│   │   ├── CollaborationHub.tsx# Multi-tool Collaboration Container & Presence
+│   │   ├── Dashboard.tsx       # System Overview, Metrics & Tab Navigation
+│   │   ├── FileViewerModal.tsx # 3X Expanded Full-Screen Media Viewer
+│   │   ├── GroupChatRoom.tsx   # Multi-Node Group Hub & Mesh Administration
+│   │   ├── Navbar.tsx          # Cyberpunk Navigation Bar & Quick Indicators
+│   │   ├── PeerScanner.tsx     # Discovered Devices Grid & Simulation Bar
+│   │   ├── ProfileSetup.tsx    # Identity Setup & P-256 Keypair Generator
+│   │   ├── SplashScreen.tsx    # Initial Animated Landing Screen
+│   │   └── VoiceNotePlayer.tsx # Compact 210px Seekable Inline Audio Player
+│   ├── services/               # Core Engine Services
+│   │   ├── collaborationSync.ts# Real-time state hydration & conflict resolution
+│   │   ├── crypto.ts           # Web Crypto API keygen, SHA-256 & QR formatting
+│   │   ├── db.ts               # IndexedDB Engine Schema v4 & offline queries
+│   │   └── network.ts          # P2P mesh transport & channel broadcast engine
+│   ├── types/                  # TypeScript Data Models & Protocols
+│   ├── App.tsx                 # Root Router & Tab View Orchestrator
+│   ├── main.tsx                # React DOM Mount Entry Point
+│   └── index.css               # Cyberpunk Dark Mode & Glassmorphism Design System
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts
-├── module_breakdown.txt     # 12-Module Implementation Specifications
+├── module_breakdown.txt        # 12-Module Formal System Specifications
 └── README.md
 ```
+
+---
+
+## Available Scripts
+
+| Command | Action |
+| :--- | :--- |
+| `npm run dev` | Starts Vite local development server at `http://localhost:3000/` with network exposure |
+| `npm run build` | Runs TypeScript compilation (`tsc`) and builds optimized production bundles to `dist/` |
+| `npm run preview` | Locally previews the production build |
 
 ---
 
 ## License & Credits
 
 Developed by **Samar** for the **FasDM Mesh Project**.  
-Distributed under the MIT License.
+Distributed under the **MIT License**.
