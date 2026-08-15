@@ -215,7 +215,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
             >
-              <Layers size={14} className={activeTab === 'collab' ? 'text-cyan-200' : 'text-cyan-400'} /> Collab Hub
+              <Layers size={14} /> Collab Hub
             </button>
           </div>
 
