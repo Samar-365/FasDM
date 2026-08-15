@@ -11,6 +11,7 @@ import {
 } from '../types';
 import { networkService } from '../services/network';
 import { dbEngine } from '../services/db';
+import { collabSyncService } from '../services/collaborationSync';
 import { SharedWhiteboard } from './collaboration/SharedWhiteboard';
 import { SharedChecklist } from './collaboration/SharedChecklist';
 import { SharedStickyNotes } from './collaboration/SharedStickyNotes';
@@ -88,11 +89,34 @@ export const CollaborationHub: React.FC<CollaborationHubProps> = ({
       setAvailableGroups(groups);
     });
 
+    const unsubPresence = networkService.subscribeCollabPresence((presence: CollabPresence) => {
+      if (presence.userId === profile.userId) return;
+      setActiveCollaborators((prev) => {
+        const next = prev.filter((p) => p.userId !== presence.userId);
+        return [...next, presence];
+      });
+    });
+
+    // Cleanup stale collaborator avatars every 4 seconds
+    const presenceTimer = setInterval(() => {
+      const now = Date.now();
+      setActiveCollaborators((prev) => prev.filter((p) => now - (p.lastActive || 0) < 6000));
+    }, 3000);
+
     return () => {
       unsubPeers();
       unsubGroups();
+      unsubPresence();
+      clearInterval(presenceTimer);
     };
   }, [profile.userId]);
+
+  // Trigger state hydration handshake upon session switch or mount
+  useEffect(() => {
+    if (selectedSessionId) {
+      collabSyncService.requestRoomState(selectedSessionId, profile);
+    }
+  }, [selectedSessionId, profile]);
 
   // Handle Session Name & Display Info
   const currentSessionName = React.useMemo(() => {
