@@ -34,70 +34,86 @@ interface SharedStickyNotesProps {
 
 const COLOR_CONFIG: Record<
   StickyNoteColor,
-  { name: string; hex: string; bg: string; border: string; text: string; headerBg: string; shadow: string }
+  {
+    name: string;
+    hex: string;
+    cardBg: string;
+    headerBg: string;
+    borderColor: string;
+    textColor: string;
+    accentColor: string;
+    boxShadow: string;
+  }
 > = {
   yellow: {
-    name: 'Cyber Yellow',
+    name: 'Yellow',
     hex: '#fbbf24',
-    bg: 'bg-amber-950/40',
-    border: 'border-amber-400/60',
-    text: 'text-amber-100',
-    headerBg: 'bg-amber-500/20 text-amber-300',
-    shadow: 'shadow-[0_0_25px_rgba(251,191,36,0.2)]',
+    cardBg: '#2e2008',
+    headerBg: '#45300a',
+    borderColor: '#78500c',
+    textColor: '#fef08a',
+    accentColor: '#fde047',
+    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
   },
   cyan: {
-    name: 'Electric Cyan',
+    name: 'Cyan',
     hex: '#06b6d4',
-    bg: 'bg-cyan-950/40',
-    border: 'border-cyan-400/60',
-    text: 'text-cyan-100',
-    headerBg: 'bg-cyan-500/20 text-cyan-300',
-    shadow: 'shadow-[0_0_25px_rgba(6,182,212,0.2)]',
+    cardBg: '#082f49',
+    headerBg: '#0e4668',
+    borderColor: '#155e75',
+    textColor: '#cffafe',
+    accentColor: '#67e8f9',
+    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
   },
   emerald: {
-    name: 'Matrix Green',
+    name: 'Green',
     hex: '#10b981',
-    bg: 'bg-emerald-950/40',
-    border: 'border-emerald-400/60',
-    text: 'text-emerald-100',
-    headerBg: 'bg-emerald-500/20 text-emerald-300',
-    shadow: 'shadow-[0_0_25px_rgba(16,185,129,0.2)]',
+    cardBg: '#063923',
+    headerBg: '#0a4f32',
+    borderColor: '#065f46',
+    textColor: '#d1fae5',
+    accentColor: '#6ee7b7',
+    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
   },
   rose: {
-    name: 'Neon Rose',
+    name: 'Rose',
     hex: '#f43f5e',
-    bg: 'bg-rose-950/40',
-    border: 'border-rose-400/60',
-    text: 'text-rose-100',
-    headerBg: 'bg-rose-500/20 text-rose-300',
-    shadow: 'shadow-[0_0_25px_rgba(244,63,94,0.2)]',
+    cardBg: '#3f0c18',
+    headerBg: '#581122',
+    borderColor: '#881337',
+    textColor: '#ffe4e6',
+    accentColor: '#fda4af',
+    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
   },
   purple: {
-    name: 'Royal Purple',
+    name: 'Purple',
     hex: '#a855f7',
-    bg: 'bg-purple-950/40',
-    border: 'border-purple-400/60',
-    text: 'text-purple-100',
-    headerBg: 'bg-purple-500/20 text-purple-300',
-    shadow: 'shadow-[0_0_25px_rgba(168,85,247,0.2)]',
+    cardBg: '#2e104a',
+    headerBg: '#411768',
+    borderColor: '#581c87',
+    textColor: '#f3e8ff',
+    accentColor: '#d8b4fe',
+    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
   },
   slate: {
-    name: 'Stealth Slate',
-    hex: '#64748b',
-    bg: 'bg-slate-900/80',
-    border: 'border-slate-600',
-    text: 'text-slate-200',
-    headerBg: 'bg-slate-800 text-slate-300',
-    shadow: 'shadow-xl',
+    name: 'Slate',
+    hex: '#94a3b8',
+    cardBg: '#1e293b',
+    headerBg: '#334155',
+    borderColor: '#475569',
+    textColor: '#f8fafc',
+    accentColor: '#cbd5e1',
+    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
   },
   amber: {
-    name: 'Golden Amber',
-    hex: '#f59e0b',
-    bg: 'bg-orange-950/40',
-    border: 'border-amber-500/60',
-    text: 'text-amber-100',
-    headerBg: 'bg-amber-600/20 text-amber-300',
-    shadow: 'shadow-[0_0_25px_rgba(245,158,11,0.2)]',
+    name: 'Amber',
+    hex: '#f97316',
+    cardBg: '#3c1806',
+    headerBg: '#552309',
+    borderColor: '#7c2d12',
+    textColor: '#ffedd5',
+    accentColor: '#fdba74',
+    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
   },
 };
 
@@ -165,12 +181,12 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
             return prev.map((n) =>
               n.noteId === action.noteId
                 ? {
-                    ...n,
-                    ...action.updates,
-                    lastEditedBy: action.authorId,
-                    lastEditedByName: action.authorName,
-                    updatedAt: Date.now(),
-                  }
+                  ...n,
+                  ...action.updates,
+                  lastEditedBy: action.authorId,
+                  lastEditedByName: action.authorName,
+                  updatedAt: Date.now(),
+                }
                 : n
             );
 
@@ -197,6 +213,9 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
           case 'note_delete':
             if (!action.noteId) return prev;
             return prev.filter((n) => n.noteId !== action.noteId);
+
+          case 'board_clear':
+            return [];
 
           default:
             return prev;
@@ -245,17 +264,17 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
     };
   }, [sessionId, profile.userId]);
 
-  // Create New Sticky Note
-  const handleAddNote = () => {
-    // Determine random or offset starting position
-    const offsetX = Math.max(30, Math.min(600, 40 + (notes.length % 5) * 60 + Math.random() * 40));
-    const offsetY = Math.max(30, Math.min(360, 40 + Math.floor(notes.length / 5) * 50 + Math.random() * 30));
+  // Create New Sticky Note (with specific color or position)
+  const handleAddNote = (colorOverride?: StickyNoteColor, posOverride?: { x: number; y: number }) => {
+    const finalColor = colorOverride || selectedAddColor;
+    const offsetX = posOverride ? Math.max(10, Math.min(posOverride.x, 800)) : Math.max(30, Math.min(600, 40 + (notes.length % 5) * 60 + Math.random() * 40));
+    const offsetY = posOverride ? Math.max(10, Math.min(posOverride.y, 450)) : Math.max(30, Math.min(360, 40 + Math.floor(notes.length / 5) * 50 + Math.random() * 30));
 
     const newNote: StickyNote = {
       noteId: `note_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`,
       sessionId,
       content: '',
-      color: selectedAddColor,
+      color: finalColor,
       position: { x: offsetX, y: offsetY },
       zIndex: notes.length + 10,
       isPinned: false,
@@ -276,6 +295,23 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
       authorName: profile.username,
       timestamp: Date.now(),
     });
+  };
+
+  // Double-click on board creates a note right at the click coordinates
+  const handleBoardDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    // Don't trigger if clicked inside a note card
+    if (target.closest('.sticky-card') || target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON') {
+      return;
+    }
+
+    const board = boardRef.current;
+    if (!board) return;
+    const boardRect = board.getBoundingClientRect();
+    const clickX = e.clientX - boardRect.left;
+    const clickY = e.clientY - boardRect.top;
+
+    handleAddNote(selectedAddColor, { x: clickX - 20, y: clickY - 20 });
   };
 
   // Duplicate Note
@@ -310,12 +346,12 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
       prev.map((n) =>
         n.noteId === noteId
           ? {
-              ...n,
-              content: text,
-              lastEditedBy: profile.userId,
-              lastEditedByName: profile.username,
-              updatedAt: Date.now(),
-            }
+            ...n,
+            content: text,
+            lastEditedBy: profile.userId,
+            lastEditedByName: profile.username,
+            updatedAt: Date.now(),
+          }
           : n
       )
     );
@@ -391,6 +427,27 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
       type: 'note_delete',
       sessionId,
       noteId,
+      authorId: profile.userId,
+      authorName: profile.username,
+      timestamp: Date.now(),
+    });
+  };
+
+  // Clear Entire Board Grid
+  const handleClearBoard = () => {
+    const notesToDelete = [...notes];
+    setNotes([]);
+
+    // Delete all notes from IndexedDB
+    notesToDelete.forEach((n) => {
+      dbEngine.deleteStickyNote(n.noteId).catch(console.warn);
+    });
+
+    // Broadcast clear action
+    networkService.sendCollabStickyAction({
+      actionId: crypto.randomUUID(),
+      type: 'board_clear',
+      sessionId,
       authorId: profile.userId,
       authorName: profile.username,
       timestamp: Date.now(),
@@ -512,76 +569,107 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
       {/* ========================================================================= */}
       {/* 1. TOP STICKY NOTES CONTROL & CREATION BAR */}
       {/* ========================================================================= */}
-      <div className="glass-panel p-3 sm:p-4 bg-slate-900/90 border border-purple-500/20 rounded-2xl shadow-xl flex flex-wrap items-center justify-between gap-3">
-        {/* Left: Add Note Controls */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
-            {(Object.keys(COLOR_CONFIG) as StickyNoteColor[]).map((cKey) => {
-              const c = COLOR_CONFIG[cKey];
-              return (
-                <button
-                  key={cKey}
-                  onClick={() => setSelectedAddColor(cKey)}
-                  className={`w-6 h-6 rounded-lg transition-transform border ${
-                    selectedAddColor === cKey
-                      ? 'scale-125 border-white shadow-[0_0_12px_rgba(255,255,255,0.8)]'
-                      : 'border-transparent hover:scale-110 opacity-75 hover:opacity-100'
-                  }`}
-                  style={{ backgroundColor: c.hex }}
-                  title={`Color: ${c.name}`}
-                />
-              );
-            })}
-          </div>
+      <div className="glass-panel p-3 sm:p-4 bg-slate-900 border border-slate-800 rounded-2xl shadow-lg flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Left: Quick Add by Color Bar */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-mono text-slate-300 font-bold flex items-center gap-1">
+              <StickyIcon size={14} className="text-purple-400" /> New Note:
+            </span>
 
-          <button
-            onClick={handleAddNote}
-            className="btn bg-gradient-to-r from-purple-600 to-rose-600 hover:from-purple-500 hover:to-rose-500 text-white text-xs font-bold py-2 px-4 rounded-xl flex items-center gap-2 shadow-[0_0_15px_rgba(168,85,247,0.3)] transition"
-          >
-            <Plus size={16} />
-            <span>+ Add Sticky Note</span>
-          </button>
-        </div>
+            {/* Direct 1-Click Color Creation Buttons */}
+            <div className="flex flex-wrap items-center gap-1.5 bg-slate-950 p-1.5 rounded-xl border border-slate-800 shadow-inner">
+              {(Object.keys(COLOR_CONFIG) as StickyNoteColor[]).map((cKey) => {
+                const c = COLOR_CONFIG[cKey];
+                const isSelected = selectedAddColor === cKey;
+                return (
+                  <button
+                    key={cKey}
+                    onClick={() => {
+                      setSelectedAddColor(cKey);
+                      handleAddNote(cKey);
+                    }}
+                    className={`group px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all transform active:scale-95 border ${isSelected
+                        ? 'text-white border-slate-500 bg-slate-800 shadow-sm'
+                        : 'text-slate-300 border-transparent hover:text-white hover:bg-slate-800'
+                      }`}
+                    style={{
+                      background: isSelected ? c.headerBg : undefined,
+                    }}
+                    title={`Click to create a ${c.name} note`}
+                  >
+                    <span
+                      className="w-3.5 h-3.5 rounded-full inline-block border border-black/30"
+                      style={{ backgroundColor: c.hex }}
+                    />
+                    <span className="text-[11px] font-mono">{c.name.split(' ')[1] || c.name}</span>
+                    <Plus size={11} className="opacity-70 group-hover:opacity-100" />
+                  </button>
+                );
+              })}
+            </div>
 
-        {/* Right: Grid Align, Filter & Search */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Color Filter */}
-          <select
-            value={colorFilter}
-            onChange={(e) => setColorFilter(e.target.value)}
-            className="px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 text-xs font-medium focus:outline-none focus:border-purple-500"
-          >
-            <option value="all">All Colors</option>
-            {(Object.keys(COLOR_CONFIG) as StickyNoteColor[]).map((cKey) => (
-              <option key={cKey} value={cKey}>
-                {COLOR_CONFIG[cKey].name}
-              </option>
-            ))}
-          </select>
-
-          {/* Search Input */}
-          <div className="relative">
-            <Search size={13} className="absolute left-2.5 top-2.5 text-slate-500" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search notes..."
-              className="pl-7 pr-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-purple-500 w-32 sm:w-40"
-            />
-          </div>
-
-          {/* Auto Arrange Grid Button */}
-          {notes.length > 1 && (
             <button
-              onClick={handleAutoArrangeGrid}
-              className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-purple-500/40 text-slate-300 hover:text-purple-300 text-xs font-medium flex items-center gap-1.5 transition shadow"
-              title="Organize notes into a clean matrix grid"
+              onClick={() => handleAddNote(selectedAddColor)}
+              className="btn bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold py-2 px-3.5 rounded-xl flex items-center gap-1.5 shadow transition"
             >
-              <LayoutGrid size={14} />
-              <span className="hidden sm:inline">Grid Align</span>
+              <Plus size={15} />
+              <span>+ Add Note</span>
             </button>
-          )}
+          </div>
+
+          {/* Right: Grid Align, Filter & Search */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Color Filter */}
+            <select
+              value={colorFilter}
+              onChange={(e) => setColorFilter(e.target.value)}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 text-xs font-medium focus:outline-none focus:border-purple-500"
+            >
+              <option value="all">All Colors ({notes.length})</option>
+              {(Object.keys(COLOR_CONFIG) as StickyNoteColor[]).map((cKey) => (
+                <option key={cKey} value={cKey}>
+                  {COLOR_CONFIG[cKey].name} ({notes.filter((n) => n.color === cKey).length})
+                </option>
+              ))}
+            </select>
+
+            {/* Search Input */}
+            <div className="relative">
+              <Search size={13} className="absolute left-2.5 top-2.5 text-slate-500" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search notes..."
+                className="pl-7 pr-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-purple-500 w-28 sm:w-36"
+              />
+            </div>
+
+            {/* Auto Arrange Grid Button */}
+            {notes.length > 1 && (
+              <button
+                onClick={handleAutoArrangeGrid}
+                className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white text-xs font-medium flex items-center gap-1.5 transition shadow"
+                title="Organize notes into a clean matrix grid"
+              >
+                <LayoutGrid size={14} />
+                <span className="hidden sm:inline">Grid Align</span>
+              </button>
+            )}
+
+            {/* Clear Entire Board Grid Button */}
+            {notes.length > 0 && (
+              <button
+                onClick={handleClearBoard}
+                className="px-3 py-1.5 rounded-xl bg-rose-950/40 border border-rose-800/60 hover:bg-rose-900/50 text-rose-300 hover:text-rose-100 text-xs font-medium flex items-center gap-1.5 transition shadow"
+                title="Remove all sticky notes from the grid"
+              >
+                <Trash2 size={14} />
+                <span className="hidden sm:inline">Clear Grid</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -592,7 +680,8 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
         ref={boardRef}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        className="w-full min-h-[620px] h-[660px] bg-slate-950/80 rounded-2xl border border-slate-800 relative overflow-hidden shadow-2xl select-none"
+        onDoubleClick={handleBoardDoubleClick}
+        className="w-full min-h-[620px] h-[660px] bg-slate-950 rounded-2xl border border-slate-800 relative overflow-hidden shadow-xl select-none cursor-crosshair"
         style={{
           backgroundImage:
             'radial-gradient(rgba(148, 163, 184, 0.12) 1.5px, transparent 1.5px)',
@@ -601,12 +690,12 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
       >
         {filteredNotes.length === 0 ? (
           <div className="w-full h-full flex flex-col items-center justify-center text-center p-8 space-y-3 pointer-events-none">
-            <div className="w-14 h-14 rounded-2xl bg-purple-950/40 border border-purple-500/30 flex items-center justify-center text-purple-400">
+            <div className="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 shadow">
               <StickyIcon size={28} />
             </div>
             <h4 className="text-sm font-bold text-white">No Sticky Notes On Board</h4>
             <p className="text-xs text-slate-400 max-w-sm">
-              Click <strong className="text-purple-400">+ Add Sticky Note</strong> above to create a movable note card for your ideas and brainstorming sessions.
+              Click any color button above or <strong className="text-purple-400">double-click anywhere on the canvas</strong> to place a note!
             </p>
           </div>
         ) : (
@@ -618,24 +707,29 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
             return (
               <div
                 key={note.noteId}
+                className={`sticky-card absolute top-0 left-0 w-60 sm:w-64 rounded-2xl border backdrop-blur-md flex flex-col transition-shadow duration-150 ${draggingNoteId === note.noteId ? 'ring-2 ring-white opacity-95 cursor-grabbing scale-[1.02]' : ''
+                  }`}
                 style={{
                   transform: `translate(${note.position.x}px, ${note.position.y}px)`,
                   zIndex: note.isPinned ? 999 : note.zIndex,
+                  background: config.cardBg,
+                  borderColor: config.borderColor,
+                  boxShadow: config.boxShadow,
+                  color: config.textColor,
                 }}
-                className={`absolute top-0 left-0 w-60 sm:w-64 rounded-2xl border backdrop-blur-md transition-shadow flex flex-col ${
-                  config.bg
-                } ${config.border} ${config.shadow} ${
-                  draggingNoteId === note.noteId ? 'ring-2 ring-white/80 opacity-90 cursor-grabbing' : ''
-                }`}
               >
                 {/* Note Card Header: Drag Handle & Quick Actions */}
                 <div
                   onPointerDown={(e) => handlePointerDown(e, note)}
-                  className={`px-3 py-2 rounded-t-2xl border-b border-white/10 flex items-center justify-between cursor-grab active:cursor-grabbing ${config.headerBg}`}
+                  className="px-3 py-2 rounded-t-2xl border-b flex items-center justify-between cursor-grab active:cursor-grabbing"
+                  style={{
+                    backgroundColor: config.headerBg,
+                    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
+                  }}
                 >
                   <div className="flex items-center gap-1.5 truncate">
-                    <Move size={12} className="text-white/60 shrink-0" />
-                    <span className="text-[11px] font-mono font-bold truncate">
+                    <Move size={12} className="opacity-70 shrink-0" />
+                    <span className="text-[11px] font-mono font-bold truncate text-white">
                       @{note.authorName}
                     </span>
                     {note.isPinned && (
@@ -649,16 +743,20 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
                   <div className="flex items-center gap-1">
                     {/* Color Swatch Menu */}
                     <div className="relative group/color">
-                      <button className="p-1 rounded text-white/70 hover:text-white hover:bg-black/20 transition">
+                      <button
+                        className="p-1 rounded text-white/80 hover:text-white hover:bg-black/30 transition"
+                        title="Recolor note"
+                      >
                         <Palette size={12} />
                       </button>
-                      <div className="absolute right-0 top-6 hidden group-hover/color:flex items-center gap-1 p-1 bg-slate-950 border border-slate-700 rounded-lg shadow-xl z-50">
+                      <div className="absolute right-0 top-6 hidden group-hover/color:flex items-center gap-1.5 p-1.5 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl z-50">
                         {(Object.keys(COLOR_CONFIG) as StickyNoteColor[]).map((cKey) => (
                           <button
                             key={cKey}
                             onClick={() => handleRecolorNote(note.noteId, cKey)}
-                            className="w-4 h-4 rounded-full border border-white/20 hover:scale-125 transition"
+                            className="w-4 h-4 rounded-full border border-white/40 hover:scale-125 transition shadow"
                             style={{ backgroundColor: COLOR_CONFIG[cKey].hex }}
+                            title={COLOR_CONFIG[cKey].name}
                           />
                         ))}
                       </div>
@@ -666,9 +764,8 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
 
                     <button
                       onClick={() => handleTogglePin(note)}
-                      className={`p-1 rounded transition ${
-                        note.isPinned ? 'text-cyan-300 bg-black/30' : 'text-white/70 hover:text-white hover:bg-black/20'
-                      }`}
+                      className={`p-1 rounded transition ${note.isPinned ? 'text-cyan-300 bg-black/40' : 'text-white/80 hover:text-white hover:bg-black/30'
+                        }`}
                       title={note.isPinned ? 'Unpin Note' : 'Pin Note to Top'}
                     >
                       <Pin size={12} />
@@ -676,7 +773,7 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
 
                     <button
                       onClick={() => handleDuplicateNote(note)}
-                      className="p-1 rounded text-white/70 hover:text-white hover:bg-black/20 transition"
+                      className="p-1 rounded text-white/80 hover:text-white hover:bg-black/30 transition"
                       title="Duplicate Note"
                     >
                       <Copy size={12} />
@@ -684,7 +781,7 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
 
                     <button
                       onClick={() => handleDeleteNote(note.noteId)}
-                      className="p-1 rounded text-rose-300/80 hover:text-rose-200 hover:bg-rose-950/60 transition"
+                      className="p-1 rounded text-rose-300 hover:text-rose-100 hover:bg-rose-950/80 transition"
                       title="Delete Note"
                     >
                       <Trash2 size={12} />
@@ -705,13 +802,17 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
                     value={note.content}
                     onChange={(e) => handleContentChange(note.noteId, e.target.value)}
                     placeholder="Type idea, note, or quick reminder here..."
-                    className={`w-full min-h-[110px] bg-transparent border-none outline-none resize-none text-xs font-sans placeholder-white/30 leading-relaxed ${config.text}`}
+                    className="w-full min-h-[110px] bg-transparent border-none outline-none resize-none text-xs font-sans placeholder-white/40 leading-relaxed font-medium"
+                    style={{ color: config.textColor }}
                   />
 
                   {/* Note Footer Info */}
-                  <div className="pt-2 mt-auto border-t border-white/5 flex items-center justify-between text-[10px] font-mono opacity-60">
-                    <span>
-                      {note.lastEditedByName ? `Edited by @${note.lastEditedByName}` : `Created by @${note.authorName}`}
+                  <div
+                    className="pt-2 mt-auto border-t flex items-center justify-between text-[10px] font-mono opacity-70"
+                    style={{ borderTopColor: 'rgba(255, 255, 255, 0.08)' }}
+                  >
+                    <span className="truncate max-w-[130px]">
+                      {note.lastEditedByName ? `@${note.lastEditedByName}` : `@${note.authorName}`}
                     </span>
                     <span>
                       {new Date(note.updatedAt || note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -724,8 +825,8 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
         )}
 
         {/* Live Board Status Footer */}
-        <div className="absolute bottom-3 left-3 pointer-events-none z-10 flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-900/80 border border-slate-800 text-[10px] font-mono text-slate-400 backdrop-blur-md">
-          <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-ping" />
+        <div className="absolute bottom-3 left-3 pointer-events-none z-10 flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-900/90 border border-slate-800 text-[10px] font-mono text-slate-400 backdrop-blur-md">
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
           <span>{notes.length} STICKY NOTES ON 2D BOARD</span>
         </div>
       </div>

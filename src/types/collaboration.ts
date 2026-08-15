@@ -57,12 +57,12 @@ export interface ChecklistItem {
   updatedAt: number;
 }
 
-export type ChecklistActionType = 
-  | 'item_add' 
-  | 'item_toggle' 
-  | 'item_update' 
-  | 'item_delete' 
-  | 'item_reorder' 
+export type ChecklistActionType =
+  | 'item_add'
+  | 'item_toggle'
+  | 'item_update'
+  | 'item_delete'
+  | 'item_reorder'
   | 'checklist_clear_completed';
 
 export interface ChecklistAction {
@@ -99,12 +99,12 @@ export interface StickyNote {
   updatedAt: number;
 }
 
-export type StickyNoteActionType = 
-  | 'note_add' 
-  | 'note_update' 
-  | 'note_move' 
-  | 'note_recolor' 
-  | 'note_pin' 
+export type StickyNoteActionType =
+  | 'note_add'
+  | 'note_update'
+  | 'note_move'
+  | 'note_recolor'
+  | 'note_pin'
   | 'note_delete';
 
 export interface StickyNoteAction {
