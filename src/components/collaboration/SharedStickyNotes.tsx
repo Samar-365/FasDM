@@ -136,6 +136,9 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
   const [draggingNoteId, setDraggingNoteId] = useState<string | null>(null);
   const dragOffsetRef = useRef<{ offsetX: number; offsetY: number }>({ offsetX: 0, offsetY: 0 });
 
+  // Clear Grid Confirmation Modal State
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+
   // Remote editing indicator Map<noteId, { username: string, avatar: string, timestamp: number }>
   const [editingUsers, setEditingUsers] = useState<Map<string, { username: string; avatar: string; timestamp: number }>>(new Map());
 
@@ -437,6 +440,7 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
   const handleClearBoard = () => {
     const notesToDelete = [...notes];
     setNotes([]);
+    setShowClearConfirm(false);
 
     // Delete all notes from IndexedDB
     notesToDelete.forEach((n) => {
@@ -569,16 +573,16 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
       {/* ========================================================================= */}
       {/* 1. TOP STICKY NOTES CONTROL & CREATION BAR */}
       {/* ========================================================================= */}
-      <div className="glass-panel p-3 sm:p-4 bg-slate-900 border border-slate-800 rounded-2xl shadow-lg flex flex-col gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="glass-panel p-3 sm:p-4 bg-slate-900/95 border border-slate-800 rounded-2xl shadow-xl flex flex-col gap-3.5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
           {/* Left: Quick Add by Color Bar */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-mono text-slate-300 font-bold flex items-center gap-1">
-              <StickyIcon size={14} className="text-purple-400" /> New Note:
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-xs font-mono text-slate-300 font-bold flex items-center gap-1.5 shrink-0">
+              <StickyIcon size={15} className="text-purple-400" /> New Note:
             </span>
 
-            {/* Direct 1-Click Color Creation Buttons */}
-            <div className="flex flex-wrap items-center gap-1.5 bg-slate-950 p-1.5 rounded-xl border border-slate-800 shadow-inner">
+            {/* Direct 1-Click Color Creation Buttons with Clear Spacing & Capsules */}
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
               {(Object.keys(COLOR_CONFIG) as StickyNoteColor[]).map((cKey) => {
                 const c = COLOR_CONFIG[cKey];
                 const isSelected = selectedAddColor === cKey;
@@ -589,42 +593,32 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
                       setSelectedAddColor(cKey);
                       handleAddNote(cKey);
                     }}
-                    className={`group px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all transform active:scale-95 border ${isSelected
-                        ? 'text-white border-slate-500 bg-slate-800 shadow-sm'
-                        : 'text-slate-300 border-transparent hover:text-white hover:bg-slate-800'
-                      }`}
-                    style={{
-                      background: isSelected ? c.headerBg : undefined,
-                    }}
-                    title={`Click to create a ${c.name} note`}
+                    className={`group px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all transform active:scale-95 hover:scale-[1.03] border shadow-sm ${
+                      isSelected
+                        ? 'text-white border-purple-500/80 bg-slate-800 ring-2 ring-purple-500/30'
+                        : 'text-slate-300 border-slate-700/80 bg-slate-800/80 hover:text-white hover:bg-slate-750 hover:border-slate-600'
+                    }`}
+                    title={`Click to add a ${c.name} note`}
                   >
                     <span
-                      className="w-3.5 h-3.5 rounded-full inline-block border border-black/30"
+                      className="w-3.5 h-3.5 rounded-full inline-block border border-white/30 shadow-sm shrink-0"
                       style={{ backgroundColor: c.hex }}
                     />
-                    <span className="text-[11px] font-mono">{c.name.split(' ')[1] || c.name}</span>
-                    <Plus size={11} className="opacity-70 group-hover:opacity-100" />
+                    <span className="font-mono text-xs text-slate-200 group-hover:text-white">{c.name.split(' ')[1] || c.name}</span>
+                    <Plus size={12} className="opacity-60 group-hover:opacity-100 text-slate-300 group-hover:text-white shrink-0" />
                   </button>
                 );
               })}
             </div>
-
-            <button
-              onClick={() => handleAddNote(selectedAddColor)}
-              className="btn bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold py-2 px-3.5 rounded-xl flex items-center gap-1.5 shadow transition"
-            >
-              <Plus size={15} />
-              <span>+ Add Note</span>
-            </button>
           </div>
 
-          {/* Right: Grid Align, Filter & Search */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Right: Grid Align, Clear Grid, Filter & Search */}
+          <div className="flex flex-wrap items-center gap-3 sm:gap-3.5 pt-1 lg:pt-0 border-t lg:border-t-0 border-slate-800/60">
             {/* Color Filter */}
             <select
               value={colorFilter}
               onChange={(e) => setColorFilter(e.target.value)}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 text-xs font-medium focus:outline-none focus:border-purple-500"
+              className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 text-xs font-medium focus:outline-none focus:border-purple-500 shadow-inner"
             >
               <option value="all">All Colors ({notes.length})</option>
               {(Object.keys(COLOR_CONFIG) as StickyNoteColor[]).map((cKey) => (
@@ -642,7 +636,7 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search notes..."
-                className="pl-7 pr-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-purple-500 w-28 sm:w-36"
+                className="pl-7 pr-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-purple-500 w-32 sm:w-44 shadow-inner"
               />
             </div>
 
@@ -650,7 +644,7 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
             {notes.length > 1 && (
               <button
                 onClick={handleAutoArrangeGrid}
-                className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white text-xs font-medium flex items-center gap-1.5 transition shadow"
+                className="px-3.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-500 text-slate-200 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition shadow-sm"
                 title="Organize notes into a clean matrix grid"
               >
                 <LayoutGrid size={14} />
@@ -661,8 +655,8 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
             {/* Clear Entire Board Grid Button */}
             {notes.length > 0 && (
               <button
-                onClick={handleClearBoard}
-                className="px-3 py-1.5 rounded-xl bg-rose-950/40 border border-rose-800/60 hover:bg-rose-900/50 text-rose-300 hover:text-rose-100 text-xs font-medium flex items-center gap-1.5 transition shadow"
+                onClick={() => setShowClearConfirm(true)}
+                className="px-3.5 py-1.5 rounded-xl bg-rose-950/50 border border-rose-800/80 hover:bg-rose-900/60 text-rose-300 hover:text-rose-100 text-xs font-semibold flex items-center gap-1.5 transition shadow-sm"
                 title="Remove all sticky notes from the grid"
               >
                 <Trash2 size={14} />
@@ -830,6 +824,37 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
           <span>{notes.length} STICKY NOTES ON 2D BOARD</span>
         </div>
       </div>
+
+      {/* ========================================================================= */}
+      {/* 3. CLEAR STICKY NOTES CONFIRMATION MODAL */}
+      {/* ========================================================================= */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="glass-panel max-w-sm w-full p-6 text-center space-y-4 border border-rose-500/30 shadow-2xl">
+            <div className="w-12 h-12 rounded-full bg-rose-950/80 border border-rose-500/50 flex items-center justify-center text-rose-400 mx-auto">
+              <Trash2 size={24} />
+            </div>
+            <h3 className="text-base font-bold text-white">Clear Sticky Notes Grid?</h3>
+            <p className="text-xs text-slate-300">
+              This action will permanently remove all <strong className="text-white font-semibold">{notes.length}</strong> sticky notes and broadcast a clear command to all connected mesh nodes in this session.
+            </p>
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="btn btn-secondary flex-1 py-2 text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleClearBoard}
+                className="btn bg-rose-600 hover:bg-rose-500 text-white font-bold flex-1 py-2 text-xs shadow-[0_0_15px_rgba(244,63,94,0.4)]"
+              >
+                Yes, Clear All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
