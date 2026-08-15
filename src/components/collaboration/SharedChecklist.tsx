@@ -7,6 +7,7 @@ import {
   ChecklistPriority,
 } from '../../types';
 import { networkService } from '../../services/network';
+import { dbEngine } from '../../services/db';
 import {
   CheckSquare,
   Square,
@@ -99,12 +100,33 @@ export const SharedChecklist: React.FC<SharedChecklistProps> = ({
     return () => unsubPeers();
   }, [profile.userId]);
 
-  // Notify parent on count changes
+  const onChecklistCountChangeRef = useRef(onChecklistCountChange);
+  useEffect(() => {
+    onChecklistCountChangeRef.current = onChecklistCountChange;
+  }, [onChecklistCountChange]);
+
+  // Load saved checklist items from IndexedDB
+  useEffect(() => {
+    let isMounted = true;
+    dbEngine.getChecklistItems(sessionId).then((saved) => {
+      if (isMounted && saved && saved.length > 0) {
+        setItems(saved);
+      }
+    }).catch(console.warn);
+    return () => { isMounted = false; };
+  }, [sessionId]);
+
+  // Notify parent on count changes and persist to IndexedDB
   useEffect(() => {
     const total = items.length;
     const completed = items.filter((i) => i.completed).length;
-    onChecklistCountChange?.({ total, completed });
-  }, [items, onChecklistCountChange]);
+    onChecklistCountChangeRef.current?.({ total, completed });
+    
+    // Save items to IndexedDB
+    items.forEach((item) => {
+      dbEngine.saveChecklistItem(item).catch(console.warn);
+    });
+  }, [items]);
 
   // Subscribe to P2P Mesh Collaboration Packets
   useEffect(() => {

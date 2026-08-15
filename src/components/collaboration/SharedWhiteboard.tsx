@@ -8,6 +8,7 @@ import {
   CollabPresence
 } from '../../types';
 import { networkService } from '../../services/network';
+import { dbEngine } from '../../services/db';
 import {
   Pen,
   Paintbrush,
@@ -81,10 +82,29 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
   const [remoteCursors, setRemoteCursors] = useState<Map<string, { x: number; y: number; username: string; avatar: string; color: string; lastSeen: number }>>(new Map());
   const lastPresenceBroadcastRef = useRef<number>(0);
 
-  // Notify parent on strokes change
+  const onStrokesCountChangeRef = useRef(onStrokesCountChange);
   useEffect(() => {
-    onStrokesCountChange?.(strokes.length);
-  }, [strokes.length, onStrokesCountChange]);
+    onStrokesCountChangeRef.current = onStrokesCountChange;
+  }, [onStrokesCountChange]);
+
+  // Load saved strokes from IndexedDB on sessionId change
+  useEffect(() => {
+    let isMounted = true;
+    dbEngine.getWhiteboardStrokes(sessionId).then((saved) => {
+      if (isMounted && saved && saved.length > 0) {
+        setStrokes(saved);
+      }
+    }).catch(console.warn);
+    return () => { isMounted = false; };
+  }, [sessionId]);
+
+  // Persist strokes to IndexedDB when modified
+  useEffect(() => {
+    if (strokes.length > 0) {
+      dbEngine.saveWhiteboardStrokes(sessionId, strokes).catch(console.warn);
+    }
+    onStrokesCountChangeRef.current?.(strokes.length);
+  }, [strokes, sessionId]);
 
   // Redraw Canvas when strokes or grid changes
   const redrawCanvas = useCallback(() => {

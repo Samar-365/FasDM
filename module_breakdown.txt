@@ -143,7 +143,7 @@ MODULE 10: Shared Collaboration Tools
 - Purpose: Provides real-time internet-free collaborative workspace tools (Whiteboard, Checklist, Sticky Notes) within 1-to-1 and Group chats.
 - Requirements: FR-11 (Shared Whiteboard), FR-12 (Shared Checklist), FR-13 (Shared Notes)
 - Key Components: src/components/CollaborationHub.tsx, src/components/collaboration/SharedWhiteboard.tsx, src/components/collaboration/SharedChecklist.tsx, src/components/collaboration/SharedStickyNotes.tsx, src/services/collaborationSync.ts, src/services/network.ts, src/services/db.ts, src/types/collaboration.ts
-- Status: IN PROGRESS 🔄 (10.1, 10.2, 10.3, 10.4, 10.5 & 10.6 Completed)
+- Status: COMPLETED ✅
 - Submodules:
   * 10.1 Data Models, Action Types & Packet Protocol (`src/types/collaboration.ts`, `src/types/index.ts`):
     - Whiteboard Data Models: `DrawingStroke` (strokeId, points `[{x, y}]`, color, size, tool: 'pen' | 'brush' | 'eraser', authorId, timestamp), `CanvasSnapshot`.
@@ -176,19 +176,19 @@ MODULE 10: Shared Collaboration Tools
     - Action deduplication cache (`actionId`) and state delta broadcast over mesh network.
     - Offline queueing & reconciliation when nodes disconnect and rejoin mesh range.
   * 10.7 IndexedDB Persistence & Chat Timeline Integration (`src/services/db.ts`, `src/components/ChatRoom.tsx`, `src/components/GroupChatRoom.tsx`):
-    - IndexedDB stores (`collab_whiteboard`, `collab_checklists`, `collab_notes`) keyed by session ID (`peerId` or `groupId`).
+    - IndexedDB stores (`collab_whiteboard`, `collab_checklists`, `collab_notes`) in schema v4 keyed by session ID (`peerId` or `groupId`).
     - Collaboration Hub trigger button in ChatRoom and GroupChatRoom header bars.
-    - In-chat event notification pills (e.g. "Samar updated 2 checklist items", "Priya drew on Whiteboard").
+    - Offline state retrieval and persistence on device reload.
 
 --------------------------------------------------------------------------------
 MODULE 11: Local Storage Engine & Offline Persistence
 --------------------------------------------------------------------------------
 - Purpose: Manages persistent offline storage, caching, and database schemas.
 - Requirements: FR-14 (Local Storage)
-- Key Components: src/services/db.ts (IndexedDB Engine v2)
+- Key Components: src/services/db.ts (IndexedDB Engine v4)
 - Status: COMPLETED ✅
 - Specifications:
-  * IndexedDB Version 2 object stores: profile, peers, messages, groups, group_messages, files.
+  * IndexedDB Version 4 object stores: profile, peers, messages, groups, group_messages, files, collab_whiteboard, collab_checklists, collab_notes.
   * Added `getUnreadSenders(myId)` method to query unread message senders for notification badges.
   * Storage quota estimation API and clear/reset user data controls.
   * Full offline operation with persistent state across app restarts and reboots.
@@ -218,9 +218,9 @@ MODULE 12: Mesh Routing & Channel Auto-Selection
  6. One-to-One Chat UI Module        (Completed ✅ - Chat timeline, message input, ticks, inline cards)
  7. Group Chat UI Module             (Completed ✅ - Group chat room, member list, admin controls, inline cards)
  8. File Viewer UI Module            (Completed ✅ - 3X modal media viewer, attachment preview, header download)
- 9. Shared Whiteboard UI Module      (Pending ⏳ - Real-time canvas drawing board & controls)
-10. Shared Checklist UI Module       (Pending ⏳ - Interactive task list & sync status)
-11. Sticky Notes UI Module          (Pending ⏳ - Multi-color collaborative notes board)
+ 9. Shared Whiteboard UI Module      (Completed ✅ - Real-time canvas drawing board & controls)
+10. Shared Checklist UI Module       (Completed ✅ - Interactive task list & sync status)
+11. Sticky Notes UI Module          (Completed ✅ - Multi-color collaborative notes board)
 12. Settings & Diagnostics UI Module(Pending ⏳ - Key fingerprint viewer, storage meter, profile reset)
 
 
@@ -239,7 +239,7 @@ Module 6: Group Messaging & Admin       | FR-5           | Completed ✅ (Group 
 Module 7: P2P File Sharing Engine       | FR-6           | Completed ✅ (3X File Viewer & Auto Escalation)
 Module 8: Voice Notes & Audio           | FR-7           | Completed ✅ (MediaRecorder & Waveform Engine)
 Module 9: Emergency Broadcast System   | FR-10          | Pending ⏳ (Priority Alert Banner & Push)
-Module 10: Shared Collaboration Suite   | FR-11,12,13    | Pending ⏳ (Whiteboard / Checklist / Notes)
-Module 11: Local Storage Engine         | FR-14          | Completed ✅ (IndexedDB Engine v2 & Unread Query)
+Module 10: Shared Collaboration Suite   | FR-11,12,13    | Completed ✅ (Whiteboard / Checklist / Notes)
+Module 11: Local Storage Engine         | FR-14          | Completed ✅ (IndexedDB Engine v4 & Stores)
 Module 12: Mesh Routing Engine          | FR-16, FR-17   | In Progress 🔄 (Direct Multi-Channel Select)
 ================================================================================

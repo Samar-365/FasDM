@@ -7,6 +7,7 @@ import {
   CollabPresence
 } from '../../types';
 import { networkService } from '../../services/network';
+import { dbEngine } from '../../services/db';
 import {
   StickyNote as StickyIcon,
   Plus,
@@ -122,10 +123,29 @@ export const SharedStickyNotes: React.FC<SharedStickyNotesProps> = ({
   // Remote editing indicator Map<noteId, { username: string, avatar: string, timestamp: number }>
   const [editingUsers, setEditingUsers] = useState<Map<string, { username: string; avatar: string; timestamp: number }>>(new Map());
 
-  // Notify parent on count change
+  const onNotesCountChangeRef = useRef(onNotesCountChange);
   useEffect(() => {
-    onNotesCountChange?.(notes.length);
-  }, [notes.length, onNotesCountChange]);
+    onNotesCountChangeRef.current = onNotesCountChange;
+  }, [onNotesCountChange]);
+
+  // Load saved notes from IndexedDB
+  useEffect(() => {
+    let isMounted = true;
+    dbEngine.getStickyNotes(sessionId).then((saved) => {
+      if (isMounted && saved && saved.length > 0) {
+        setNotes(saved);
+      }
+    }).catch(console.warn);
+    return () => { isMounted = false; };
+  }, [sessionId]);
+
+  // Notify parent on count change and persist to IndexedDB
+  useEffect(() => {
+    onNotesCountChangeRef.current?.(notes.length);
+    notes.forEach((note) => {
+      dbEngine.saveStickyNote(note).catch(console.warn);
+    });
+  }, [notes]);
 
   // Subscribe to P2P Mesh Collaboration Packets
   useEffect(() => {

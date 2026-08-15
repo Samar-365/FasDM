@@ -1,7 +1,18 @@
-import { UserProfile, PeerDevice, ChatMessage, GroupChat, GroupMessage, SharedFile } from '../types';
+import {
+  UserProfile,
+  PeerDevice,
+  ChatMessage,
+  GroupChat,
+  GroupMessage,
+  SharedFile,
+  DrawingStroke,
+  ChecklistItem,
+  StickyNote,
+  CollabRoomState,
+} from '../types';
 
 const DB_NAME = 'FasDMMeshDB';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 export class LocalStorageEngine {
   private dbPromise: Promise<IDBDatabase> | null = null;
@@ -58,9 +69,39 @@ export class LocalStorageEngine {
           fileStore.createIndex('groupId', 'groupId', { unique: false });
           fileStore.createIndex('timestamp', 'timestamp', { unique: false });
         }
+
+        // Module 10: Collaboration Whiteboard Store
+        if (!db.objectStoreNames.contains('collab_whiteboard')) {
+          db.createObjectStore('collab_whiteboard', { keyPath: 'sessionId' });
+        }
+
+        // Module 10: Collaboration Checklist Store
+        if (!db.objectStoreNames.contains('collab_checklists')) {
+          const chkStore = db.createObjectStore('collab_checklists', { keyPath: 'itemId' });
+          chkStore.createIndex('sessionId', 'sessionId', { unique: false });
+        }
+
+        // Module 10: Collaboration Sticky Notes Store
+        if (!db.objectStoreNames.contains('collab_notes')) {
+          const noteStore = db.createObjectStore('collab_notes', { keyPath: 'noteId' });
+          noteStore.createIndex('sessionId', 'sessionId', { unique: false });
+        }
       };
 
-      request.onsuccess = () => resolve(request.result);
+      request.onblocked = () => {
+        console.warn('IndexedDB upgrade blocked by open tabs. Please reload.');
+      };
+
+      request.onsuccess = () => {
+        const db = request.result;
+        db.onversionchange = () => {
+          try {
+            db.close();
+          } catch {}
+          this.dbPromise = null;
+        };
+        resolve(db);
+      };
       request.onerror = () => reject(request.error);
     });
 
@@ -381,6 +422,221 @@ export class LocalStorageEngine {
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
+  }
+
+  // ==========================================
+  // MODULE 10: COLLABORATION STORE OPERATIONS
+  // ==========================================
+
+  // --- Whiteboard Persistence ---
+  async saveWhiteboardStrokes(sessionId: string, strokes: DrawingStroke[]): Promise<void> {
+    try {
+      const db = await this.initDB();
+      if (!db.objectStoreNames.contains('collab_whiteboard')) return;
+      return new Promise((resolve, reject) => {
+        try {
+          const tx = db.transaction('collab_whiteboard', 'readwrite');
+          const store = tx.objectStore('collab_whiteboard');
+          const request = store.put({ sessionId, strokes, lastUpdated: Date.now() });
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        } catch {
+          resolve();
+        }
+      });
+    } catch {
+      return;
+    }
+  }
+
+  async getWhiteboardStrokes(sessionId: string): Promise<DrawingStroke[]> {
+    try {
+      const db = await this.initDB();
+      if (!db.objectStoreNames.contains('collab_whiteboard')) return [];
+      return new Promise((resolve, reject) => {
+        try {
+          const tx = db.transaction('collab_whiteboard', 'readonly');
+          const store = tx.objectStore('collab_whiteboard');
+          const request = store.get(sessionId);
+          request.onsuccess = () => {
+            const record = request.result;
+            resolve(record?.strokes || []);
+          };
+          request.onerror = () => reject(request.error);
+        } catch {
+          resolve([]);
+        }
+      });
+    } catch {
+      return [];
+    }
+  }
+
+  // --- Checklist Persistence ---
+  async saveChecklistItem(item: ChecklistItem): Promise<void> {
+    try {
+      const db = await this.initDB();
+      if (!db.objectStoreNames.contains('collab_checklists')) return;
+      return new Promise((resolve, reject) => {
+        try {
+          const tx = db.transaction('collab_checklists', 'readwrite');
+          const store = tx.objectStore('collab_checklists');
+          const request = store.put(item);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        } catch {
+          resolve();
+        }
+      });
+    } catch {
+      return;
+    }
+  }
+
+  async getChecklistItems(sessionId: string): Promise<ChecklistItem[]> {
+    try {
+      const db = await this.initDB();
+      if (!db.objectStoreNames.contains('collab_checklists')) return [];
+      return new Promise((resolve, reject) => {
+        try {
+          const tx = db.transaction('collab_checklists', 'readonly');
+          const store = tx.objectStore('collab_checklists');
+          const index = store.index('sessionId');
+          const request = index.getAll(sessionId);
+          request.onsuccess = () => {
+            const items = (request.result as ChecklistItem[]) || [];
+            items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            resolve(items);
+          };
+          request.onerror = () => reject(request.error);
+        } catch {
+          resolve([]);
+        }
+      });
+    } catch {
+      return [];
+    }
+  }
+
+  async deleteChecklistItem(itemId: string): Promise<void> {
+    try {
+      const db = await this.initDB();
+      if (!db.objectStoreNames.contains('collab_checklists')) return;
+      return new Promise((resolve, reject) => {
+        try {
+          const tx = db.transaction('collab_checklists', 'readwrite');
+          const store = tx.objectStore('collab_checklists');
+          const request = store.delete(itemId);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        } catch {
+          resolve();
+        }
+      });
+    } catch {
+      return;
+    }
+  }
+
+  // --- Sticky Notes Persistence ---
+  async saveStickyNote(note: StickyNote): Promise<void> {
+    try {
+      const db = await this.initDB();
+      if (!db.objectStoreNames.contains('collab_notes')) return;
+      return new Promise((resolve, reject) => {
+        try {
+          const tx = db.transaction('collab_notes', 'readwrite');
+          const store = tx.objectStore('collab_notes');
+          const request = store.put(note);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        } catch {
+          resolve();
+        }
+      });
+    } catch {
+      return;
+    }
+  }
+
+  async getStickyNotes(sessionId: string): Promise<StickyNote[]> {
+    try {
+      const db = await this.initDB();
+      if (!db.objectStoreNames.contains('collab_notes')) return [];
+      return new Promise((resolve, reject) => {
+        try {
+          const tx = db.transaction('collab_notes', 'readonly');
+          const store = tx.objectStore('collab_notes');
+          const index = store.index('sessionId');
+          const request = index.getAll(sessionId);
+          request.onsuccess = () => {
+            const notes = (request.result as StickyNote[]) || [];
+            resolve(notes);
+          };
+          request.onerror = () => reject(request.error);
+        } catch {
+          resolve([]);
+        }
+      });
+    } catch {
+      return [];
+    }
+  }
+
+  async deleteStickyNote(noteId: string): Promise<void> {
+    try {
+      const db = await this.initDB();
+      if (!db.objectStoreNames.contains('collab_notes')) return;
+      return new Promise((resolve, reject) => {
+        try {
+          const tx = db.transaction('collab_notes', 'readwrite');
+          const store = tx.objectStore('collab_notes');
+          const request = store.delete(noteId);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        } catch {
+          resolve();
+        }
+      });
+    } catch {
+      return;
+    }
+  }
+
+  // --- Full Room State Snapshot Persistence ---
+  async saveCollabRoomState(state: CollabRoomState): Promise<void> {
+    try {
+      await this.saveWhiteboardStrokes(state.sessionId, state.whiteboardStrokes);
+      for (const item of state.checklistItems) {
+        await this.saveChecklistItem(item);
+      }
+      for (const note of state.stickyNotes) {
+        await this.saveStickyNote(note);
+      }
+    } catch {}
+  }
+
+  async getCollabRoomState(sessionId: string): Promise<CollabRoomState> {
+    try {
+      const whiteboardStrokes = await this.getWhiteboardStrokes(sessionId);
+      const checklistItems = await this.getChecklistItems(sessionId);
+      const stickyNotes = await this.getStickyNotes(sessionId);
+      return {
+        sessionId,
+        whiteboardStrokes,
+        checklistItems,
+        stickyNotes,
+        lastModified: Date.now(),
+      };
+    } catch {
+      return {
+        sessionId,
+        whiteboardStrokes: [],
+        checklistItems: [],
+        stickyNotes: [],
+        lastModified: Date.now(),
+      };
+    }
   }
 
   // --- Reset Database ---

@@ -417,6 +417,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
           <GroupChatRoom
             currentUser={profile}
             onSelectFile={(file) => setSelectedFileForViewer(file)}
+            onOpenCollab={() => setActiveTab('collab')}
           />
         )}
 

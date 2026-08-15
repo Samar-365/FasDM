@@ -22,15 +22,17 @@ import {
   FileText,
   Eye,
   Download,
-  Loader2
+  Loader2,
+  Layers
 } from 'lucide-react';
 
 interface GroupChatRoomProps {
   currentUser: UserProfile;
   onSelectFile?: (file: SharedFile) => void;
+  onOpenCollab?: (group: GroupChat) => void;
 }
 
-export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSelectFile }) => {
+export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSelectFile, onOpenCollab }) => {
   const [groups, setGroups] = useState<GroupChat[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<GroupChat | null>(null);
   const [messages, setMessages] = useState<GroupMessage[]>([]);
@@ -330,6 +332,17 @@ export const GroupChatRoom: React.FC<GroupChatRoomProps> = ({ currentUser, onSel
             </div>
 
             <div className="flex items-center gap-2">
+              {onOpenCollab && (
+                <button
+                  onClick={() => onOpenCollab(selectedGroup)}
+                  className="p-2 rounded-lg bg-cyan-950/80 border border-cyan-500/40 text-cyan-400 hover:bg-cyan-900/60 transition flex items-center gap-1.5 text-xs font-semibold shadow-[0_0_10px_rgba(6,182,212,0.2)]"
+                  title="Open Group Collaboration Workspace"
+                >
+                  <Layers size={14} />
+                  <span className="hidden sm:inline">Collab Hub</span>
+                </button>
+              )}
+
               <button
                 onClick={() => setShowMembersModal(true)}
                 className="btn btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5"
