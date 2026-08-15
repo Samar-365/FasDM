@@ -7,6 +7,7 @@ import { PeerScanner } from './PeerScanner';
 import { ChatRoom } from './ChatRoom';
 import { GroupChatRoom } from './GroupChatRoom';
 import { FileViewerModal } from './FileViewerModal';
+import { CollaborationHub } from './CollaborationHub';
 import {
   Shield,
   QrCode,
@@ -16,7 +17,8 @@ import {
   LayoutDashboard,
   ArrowRight,
   FileText,
-  Bell
+  Bell,
+  Layers
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -205,6 +207,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
             >
               <Users size={14} /> Group Hub
             </button>
+
+            <button
+              onClick={() => setActiveTab('collab')}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${activeTab === 'collab'
+                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-[0_0_15px_rgba(6,182,212,0.3)]'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
+            >
+              <Layers size={14} className={activeTab === 'collab' ? 'text-cyan-200' : 'text-cyan-400'} /> Collab Hub
+            </button>
           </div>
 
           <div className="flex items-center gap-2">
@@ -331,6 +343,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
                 </button>
               </div>
             </div>
+
+            {/* Quick Action: Collaboration Workspace Suite */}
+            <div className="glass-panel p-5 bg-gradient-to-r from-cyan-950/40 via-slate-900/60 to-blue-950/40 border border-cyan-500/30 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.25)] shrink-0">
+                  <Layers size={24} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-white">Shared Collaboration Suite (Module 10)</h3>
+                    <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-[10px] font-mono border border-cyan-500/30">
+                      Offline-First
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    Real-time synchronized Whiteboard, interactive Checklist, and movable Sticky Notes over P2P mesh links.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setActiveTab('collab')}
+                className="btn btn-primary text-xs py-2.5 px-5 shrink-0 flex items-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.3)] bg-gradient-to-r from-cyan-600 to-blue-600 border-none"
+              >
+                <Layers size={15} /> Open Collaboration Hub <ArrowRight size={14} />
+              </button>
+            </div>
           </div>
         )}
 
@@ -350,6 +389,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
               peer={selectedPeerForChat}
               onBackToScanner={() => setActiveTab('peers')}
               onSelectFile={(file) => setSelectedFileForViewer(file)}
+              onOpenCollab={() => setActiveTab('collab')}
             />
           ) : (
             <div className="glass-panel p-12 text-center space-y-3 fade-in-up">
@@ -377,6 +417,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
           <GroupChatRoom
             currentUser={profile}
             onSelectFile={(file) => setSelectedFileForViewer(file)}
+            onOpenCollab={() => setActiveTab('collab')}
+          />
+        )}
+
+        {/* TAB 5: COLLABORATION WORKSPACE HUB */}
+        {activeTab === 'collab' && (
+          <CollaborationHub
+            profile={profile}
+            initialSessionId={selectedPeerForChat?.deviceId}
+            initialSessionType={selectedPeerForChat ? 'peer' : 'scratch'}
+            onOpenChatWithPeer={handleSelectPeerForChat}
           />
         )}
 

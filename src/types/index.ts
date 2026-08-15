@@ -7,7 +7,7 @@ export interface UserProfile {
 }
 
 export type AppView = 'splash' | 'setup' | 'dashboard';
-export type DashboardTab = 'overview' | 'peers' | 'chat' | 'groups';
+export type DashboardTab = 'overview' | 'peers' | 'chat' | 'groups' | 'collab';
 
 export type TransportChannel = 'LAN' | 'Wi-Fi Direct' | 'Bluetooth';
 export type MessageStatus = 'sent' | 'delivered' | 'read';
@@ -109,7 +109,13 @@ export type NetworkPacketType =
   | 'FILE_TRANSFER'
   | 'FILE_ACK'
   | 'VOICE_NOTE'
-  | 'VOICE_ACK';
+  | 'VOICE_ACK'
+  | 'COLLAB_WHITEBOARD_ACTION'
+  | 'COLLAB_CHECKLIST_ACTION'
+  | 'COLLAB_STICKY_ACTION'
+  | 'COLLAB_ROOM_STATE_REQUEST'
+  | 'COLLAB_ROOM_STATE_RESPONSE'
+  | 'COLLAB_PRESENCE_HEARTBEAT';
 
 export interface NetworkPacket {
   id: string;
@@ -124,6 +130,8 @@ export interface NetworkPacket {
   payload: any;
   timestamp: number;
 }
+
+export * from './collaboration';
 
 
 

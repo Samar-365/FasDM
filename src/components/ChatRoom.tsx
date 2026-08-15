@@ -20,7 +20,8 @@ import {
   FileText,
   Eye,
   Download,
-  Loader2
+  Loader2,
+  Layers
 } from 'lucide-react';
 
 interface ChatRoomProps {
@@ -28,9 +29,10 @@ interface ChatRoomProps {
   peer: PeerDevice;
   onBackToScanner?: () => void;
   onSelectFile?: (file: SharedFile) => void;
+  onOpenCollab?: () => void;
 }
 
-export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToScanner, onSelectFile }) => {
+export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToScanner, onSelectFile, onOpenCollab }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [activeChannel, setActiveChannel] = useState<TransportChannel>(peer.connectionType);
@@ -295,6 +297,17 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ currentUser, peer, onBackToS
               </button>
             ))}
           </div>
+
+          {onOpenCollab && (
+            <button
+              onClick={onOpenCollab}
+              className="p-2 rounded-lg bg-cyan-950/80 border border-cyan-500/40 text-cyan-400 hover:bg-cyan-900/60 transition flex items-center gap-1.5 text-xs font-semibold shadow-[0_0_10px_rgba(6,182,212,0.2)]"
+              title="Open Shared Collaboration Workspace"
+            >
+              <Layers size={15} />
+              <span className="hidden sm:inline">Collab Hub</span>
+            </button>
+          )}
 
           <button
             onClick={handleClearHistory}
