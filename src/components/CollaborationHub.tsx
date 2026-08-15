@@ -252,11 +252,10 @@ export const CollaborationHub: React.FC<CollaborationHubProps> = ({
                   setSelectedSessionId('local_scratchpad');
                   setShowSessionSelector(false);
                 }}
-                className={`w-full p-2.5 rounded-lg flex items-center gap-3 transition text-left text-xs font-semibold ${
-                  sessionType === 'scratch'
+                className={`w-full p-2.5 rounded-lg flex items-center gap-3 transition text-left text-xs font-semibold ${sessionType === 'scratch'
                     ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
                     : 'bg-slate-900/60 text-slate-300 hover:bg-slate-800 border border-slate-800'
-                }`}
+                  }`}
               >
                 <div className="w-8 h-8 rounded-lg bg-cyan-950 flex items-center justify-center text-cyan-400 font-bold">
                   ★
@@ -281,11 +280,10 @@ export const CollaborationHub: React.FC<CollaborationHubProps> = ({
                         setSelectedSessionId(peer.deviceId);
                         setShowSessionSelector(false);
                       }}
-                      className={`w-full p-2 rounded-lg flex items-center justify-between transition text-xs ${
-                        sessionType === 'peer' && selectedSessionId === peer.deviceId
+                      className={`w-full p-2 rounded-lg flex items-center justify-between transition text-xs ${sessionType === 'peer' && selectedSessionId === peer.deviceId
                           ? 'bg-blue-600/20 text-blue-300 border border-blue-500/40'
                           : 'bg-slate-900/60 text-slate-300 hover:bg-slate-800 border border-slate-800'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-2.5 truncate">
                         <div
@@ -318,11 +316,10 @@ export const CollaborationHub: React.FC<CollaborationHubProps> = ({
                         setSelectedSessionId(group.groupId);
                         setShowSessionSelector(false);
                       }}
-                      className={`w-full p-2 rounded-lg flex items-center justify-between transition text-xs ${
-                        sessionType === 'group' && selectedSessionId === group.groupId
+                      className={`w-full p-2 rounded-lg flex items-center justify-between transition text-xs ${sessionType === 'group' && selectedSessionId === group.groupId
                           ? 'bg-purple-600/20 text-purple-300 border border-purple-500/40'
                           : 'bg-slate-900/60 text-slate-300 hover:bg-slate-800 border border-slate-800'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-2.5 truncate">
                         <div
@@ -442,11 +439,10 @@ export const CollaborationHub: React.FC<CollaborationHubProps> = ({
           {/* Tab 1: Whiteboard */}
           <button
             onClick={() => setActiveTab('whiteboard')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2.5 ${
-              activeTab === 'whiteboard'
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2.5 ${activeTab === 'whiteboard'
                 ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)]'
                 : 'text-slate-400 hover:text-white hover:bg-slate-900'
-            }`}
+              }`}
           >
             <PenTool size={15} className={activeTab === 'whiteboard' ? 'text-cyan-200' : ''} />
             <span>Shared Whiteboard</span>
@@ -460,11 +456,10 @@ export const CollaborationHub: React.FC<CollaborationHubProps> = ({
           {/* Tab 2: Checklist */}
           <button
             onClick={() => setActiveTab('checklist')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2.5 ${
-              activeTab === 'checklist'
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2.5 ${activeTab === 'checklist'
                 ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)]'
                 : 'text-slate-400 hover:text-white hover:bg-slate-900'
-            }`}
+              }`}
           >
             <CheckSquare size={15} className={activeTab === 'checklist' ? 'text-emerald-200' : ''} />
             <span>Shared Checklist</span>
@@ -478,11 +473,10 @@ export const CollaborationHub: React.FC<CollaborationHubProps> = ({
           {/* Tab 3: Sticky Notes */}
           <button
             onClick={() => setActiveTab('notes')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2.5 ${
-              activeTab === 'notes'
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2.5 ${activeTab === 'notes'
                 ? 'bg-gradient-to-r from-purple-600 to-rose-600 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)]'
                 : 'text-slate-400 hover:text-white hover:bg-slate-900'
-            }`}
+              }`}
           >
             <StickyIcon size={15} className={activeTab === 'notes' ? 'text-purple-200' : ''} />
             <span>Sticky Notes</span>

@@ -63,7 +63,8 @@ export type ChecklistActionType =
   | 'item_update'
   | 'item_delete'
   | 'item_reorder'
-  | 'checklist_clear_completed';
+  | 'checklist_clear_completed'
+  | 'checklist_clear_all';
 
 export interface ChecklistAction {
   actionId: string;

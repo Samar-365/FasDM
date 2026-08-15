@@ -35,34 +35,30 @@ interface SharedChecklistProps {
   onChecklistCountChange?: (count: { total: number; completed: number }) => void;
 }
 
-const PRIORITY_CONFIG: Record<ChecklistPriority, { label: string; bg: string; text: string; border: string; icon: string }> = {
+const PRIORITY_CONFIG: Record<ChecklistPriority, { label: string; bg: string; text: string; border: string }> = {
   urgent: {
     label: 'Urgent',
     bg: 'bg-rose-500/20',
     text: 'text-rose-400',
     border: 'border-rose-500/40',
-    icon: '🔥',
   },
   high: {
     label: 'High',
     bg: 'bg-amber-500/20',
     text: 'text-amber-400',
     border: 'border-amber-500/40',
-    icon: '⚡',
   },
   medium: {
     label: 'Medium',
     bg: 'bg-cyan-500/20',
     text: 'text-cyan-400',
     border: 'border-cyan-500/40',
-    icon: '🔹',
   },
   low: {
     label: 'Low',
     bg: 'bg-slate-700/40',
     text: 'text-slate-400',
     border: 'border-slate-700',
-    icon: '▫️',
   },
 };
 
@@ -88,6 +84,9 @@ export const SharedChecklist: React.FC<SharedChecklistProps> = ({
   // Inline Edit State
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
+
+  // Clear All Tasks Modal State
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // Available Peers for Assignee list
   const [availablePeers, setAvailablePeers] = useState<PeerDevice[]>([]);
@@ -121,7 +120,7 @@ export const SharedChecklist: React.FC<SharedChecklistProps> = ({
     const total = items.length;
     const completed = items.filter((i) => i.completed).length;
     onChecklistCountChangeRef.current?.({ total, completed });
-    
+
     // Save items to IndexedDB
     items.forEach((item) => {
       dbEngine.saveChecklistItem(item).catch(console.warn);
@@ -172,6 +171,9 @@ export const SharedChecklist: React.FC<SharedChecklistProps> = ({
           case 'checklist_clear_completed':
             return prev.filter((i) => !i.completed);
 
+          case 'checklist_clear_all':
+            return [];
+
           default:
             return prev;
         }
@@ -213,6 +215,17 @@ export const SharedChecklist: React.FC<SharedChecklistProps> = ({
     // Optimistic local state update
     setItems((prev) => [newItem, ...prev]);
     setNewTitle('');
+
+    // If user was viewing completed only or filtering by search, reset filter so new task is visible
+    if (statusFilter === 'completed') {
+      setStatusFilter('all');
+    }
+    if (searchQuery.trim()) {
+      setSearchQuery('');
+    }
+
+    // Save immediately to IndexedDB
+    dbEngine.saveChecklistItem(newItem).catch(console.warn);
 
     // Broadcast to P2P mesh
     networkService.sendCollabChecklistAction({
@@ -258,6 +271,7 @@ export const SharedChecklist: React.FC<SharedChecklistProps> = ({
   // Delete Item Action
   const handleDeleteItem = (itemId: string) => {
     setItems((prev) => prev.filter((i) => i.itemId !== itemId));
+    dbEngine.deleteChecklistItem(itemId).catch(console.warn);
 
     networkService.sendCollabChecklistAction({
       actionId: crypto.randomUUID(),
@@ -272,14 +286,41 @@ export const SharedChecklist: React.FC<SharedChecklistProps> = ({
 
   // Clear Completed Action
   const handleClearCompleted = () => {
-    const hasCompleted = items.some((i) => i.completed);
-    if (!hasCompleted) return;
+    const completedItems = items.filter((i) => i.completed);
+    if (completedItems.length === 0) return;
+
+    // Delete from IndexedDB
+    completedItems.forEach((i) => {
+      dbEngine.deleteChecklistItem(i.itemId).catch(console.warn);
+    });
 
     setItems((prev) => prev.filter((i) => !i.completed));
 
     networkService.sendCollabChecklistAction({
       actionId: crypto.randomUUID(),
       type: 'checklist_clear_completed',
+      sessionId,
+      authorId: profile.userId,
+      authorName: profile.username,
+      timestamp: Date.now(),
+    });
+  };
+
+  // Clear All Tasks Action
+  const handleClearAll = () => {
+    const itemsToDelete = [...items];
+    setItems([]);
+    setShowClearConfirm(false);
+
+    // Delete all from IndexedDB
+    itemsToDelete.forEach((i) => {
+      dbEngine.deleteChecklistItem(i.itemId).catch(console.warn);
+    });
+
+    // Broadcast
+    networkService.sendCollabChecklistAction({
+      actionId: crypto.randomUUID(),
+      type: 'checklist_clear_all',
       sessionId,
       authorId: profile.userId,
       authorName: profile.username,
@@ -298,18 +339,16 @@ export const SharedChecklist: React.FC<SharedChecklistProps> = ({
     setItems((prev) =>
       prev.map((i) => (i.itemId === itemId ? { ...i, title: trimmed, updatedAt: Date.now() } : i))
     );
-    setEditingItemId(null);
 
     networkService.sendCollabChecklistAction({
       actionId: crypto.randomUUID(),
       type: 'item_update',
-      sessionId,
-      itemId,
-      updates: { title: trimmed },
       authorId: profile.userId,
       authorName: profile.username,
       timestamp: Date.now(),
     });
+
+    setEditingItemId(null);
   };
 
   // Filter & Search computation
@@ -407,10 +446,10 @@ export const SharedChecklist: React.FC<SharedChecklistProps> = ({
             onChange={(e) => setSelectedPriority(e.target.value as ChecklistPriority)}
             className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-300 text-xs font-medium focus:outline-none focus:border-emerald-500 cursor-pointer"
           >
-            <option value="urgent">🔥 Urgent Priority</option>
-            <option value="high">⚡ High Priority</option>
-            <option value="medium">🔹 Medium Priority</option>
-            <option value="low">▫️ Low Priority</option>
+            <option value="urgent">Urgent Priority</option>
+            <option value="high">High Priority</option>
+            <option value="medium">Medium Priority</option>
+            <option value="low">Low Priority</option>
           </select>
 
           {/* Assignee Selector */}
@@ -494,11 +533,22 @@ export const SharedChecklist: React.FC<SharedChecklistProps> = ({
           {completedTasks > 0 && (
             <button
               onClick={handleClearCompleted}
-              className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-rose-500/40 text-slate-400 hover:text-rose-400 text-xs font-medium flex items-center gap-1.5 transition"
+              className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-amber-500/40 text-slate-400 hover:text-amber-400 text-xs font-medium flex items-center gap-1.5 transition shadow-sm"
               title="Remove all completed tasks"
             >
               <Trash2 size={13} />
               <span className="hidden sm:inline">Clear Done</span>
+            </button>
+          )}
+
+          {items.length > 0 && (
+            <button
+              onClick={() => setShowClearConfirm(true)}
+              className="px-3 py-1.5 rounded-xl bg-rose-950/40 border border-rose-800/60 hover:bg-rose-900/50 text-rose-300 hover:text-rose-100 text-xs font-medium flex items-center gap-1.5 transition shadow-sm"
+              title="Remove all tasks from this checklist"
+            >
+              <Trash2 size={13} />
+              <span className="hidden sm:inline">Clear All</span>
             </button>
           )}
         </div>
@@ -536,16 +586,17 @@ export const SharedChecklist: React.FC<SharedChecklistProps> = ({
               >
                 {/* Left: Checkbox & Content */}
                 <div className="flex items-start gap-3 min-w-0 flex-1">
-                  {/* Custom Cyberpunk Checkbox */}
+                  {/* Custom Distinct Color Checkbox */}
                   <button
                     onClick={() => handleToggleItem(item)}
-                    className={`mt-0.5 w-5 h-5 rounded-lg border flex items-center justify-center transition shrink-0 ${
+                    className={`mt-0.5 w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all duration-150 shrink-0 ${
                       item.completed
-                        ? 'bg-emerald-600 border-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.5)]'
-                        : 'bg-slate-950 border-slate-700 hover:border-emerald-400 text-transparent'
+                        ? 'bg-gradient-to-br from-cyan-500 to-blue-600 border-cyan-400 text-white shadow-md shadow-cyan-500/25'
+                        : 'bg-cyan-950/40 border-cyan-400/80 hover:border-cyan-300 hover:bg-cyan-900/50 text-transparent shadow-sm'
                     }`}
+                    title={item.completed ? 'Mark as incomplete' : 'Mark as completed'}
                   >
-                    <Check size={12} strokeWidth={3} />
+                    <Check size={12} strokeWidth={3} className={item.completed ? 'text-white' : 'opacity-0'} />
                   </button>
 
                   <div className="min-w-0 flex-1 space-y-1">
@@ -592,9 +643,8 @@ export const SharedChecklist: React.FC<SharedChecklistProps> = ({
                     {/* Metadata Badges: Priority, Author, Assignee, Completed By */}
                     <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono">
                       {/* Priority Badge */}
-                      <span className={`px-2 py-0.5 rounded-full border ${pConfig.bg} ${pConfig.text} ${pConfig.border} flex items-center gap-1`}>
-                        <span>{pConfig.icon}</span>
-                        <span>{pConfig.label}</span>
+                      <span className={`px-2 py-0.5 rounded-full border ${pConfig.bg} ${pConfig.text} ${pConfig.border} font-semibold`}>
+                        {pConfig.label}
                       </span>
 
                       {/* Author */}
@@ -647,6 +697,37 @@ export const SharedChecklist: React.FC<SharedChecklistProps> = ({
           })
         )}
       </div>
+
+      {/* ========================================================================= */}
+      {/* 5. CLEAR ALL TASKS CONFIRMATION MODAL */}
+      {/* ========================================================================= */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="glass-panel max-w-sm w-full p-6 text-center space-y-4 border border-rose-500/30 shadow-2xl">
+            <div className="w-12 h-12 rounded-full bg-rose-950/80 border border-rose-500/50 flex items-center justify-center text-rose-400 mx-auto">
+              <Trash2 size={24} />
+            </div>
+            <h3 className="text-base font-bold text-white">Clear All Checklist Tasks?</h3>
+            <p className="text-xs text-slate-300">
+              This action will permanently remove all <strong className="text-white font-semibold">{items.length}</strong> tasks and broadcast a clear command to all connected mesh nodes in this session.
+            </p>
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="btn btn-secondary flex-1 py-2 text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleClearAll}
+                className="btn bg-rose-600 hover:bg-rose-500 text-white font-bold flex-1 py-2 text-xs shadow-[0_0_15px_rgba(244,63,94,0.4)]"
+              >
+                Yes, Clear All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
