@@ -100,9 +100,7 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
 
   // Persist strokes to IndexedDB when modified
   useEffect(() => {
-    if (strokes.length > 0) {
-      dbEngine.saveWhiteboardStrokes(sessionId, strokes).catch(console.warn);
-    }
+    dbEngine.saveWhiteboardStrokes(sessionId, strokes).catch(console.warn);
     onStrokesCountChangeRef.current?.(strokes.length);
   }, [strokes, sessionId]);
 
@@ -263,8 +261,17 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
           if (prev.some((s) => s.strokeId === newStroke.strokeId)) return prev;
           return [...prev, newStroke];
         });
+        setRedoStack((prev) => prev.filter((s) => s.strokeId !== newStroke.strokeId));
       } else if (action.type === 'stroke_undo') {
-        setStrokes((prev) => prev.slice(0, -1));
+        if (action.strokeId) {
+          setStrokes((prev) => prev.filter((s) => s.strokeId !== action.strokeId));
+        } else if (action.authorId) {
+          setStrokes((prev) => {
+            const idx = prev.map((s) => s.authorId).lastIndexOf(action.authorId);
+            if (idx === -1) return prev;
+            return [...prev.slice(0, idx), ...prev.slice(idx + 1)];
+          });
+        }
       } else if (action.type === 'canvas_clear') {
         setStrokes([]);
         setRedoStack([]);
@@ -385,7 +392,7 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
     isDrawingRef.current = false;
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {}
+    } catch { }
 
     if (currentPointsRef.current.length === 0 || !currentStrokeIdRef.current) return;
 
@@ -403,7 +410,8 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
 
     // Save to local strokes state
     setStrokes((prev) => [...prev, newStroke]);
-    setRedoStack([]);
+    // Only clear current user's undone strokes
+    setRedoStack((prev) => prev.filter((s) => s.authorId !== profile.userId));
 
     // Broadcast stroke to mesh network
     networkService.sendCollabWhiteboardAction({
@@ -420,28 +428,36 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
     currentStrokeIdRef.current = null;
   };
 
-  // Undo / Redo Actions
-  const handleUndo = () => {
-    if (strokes.length === 0) return;
-    const lastStroke = strokes[strokes.length - 1];
-    setStrokes((prev) => prev.slice(0, -1));
-    setRedoStack((prev) => [...prev, lastStroke]);
+  // User-Scoped Undo / Redo Actions (User can only undo/redo their own strokes)
+  const handleUndo = useCallback(() => {
+    // Only find strokes created by the active user
+    const userStrokes = strokes.filter((s) => s.authorId === profile.userId);
+    if (userStrokes.length === 0) return;
+    const lastUserStroke = userStrokes[userStrokes.length - 1];
+
+    // Remove only this user's stroke by its strokeId
+    setStrokes((prev) => prev.filter((s) => s.strokeId !== lastUserStroke.strokeId));
+    setRedoStack((prev) => [...prev, lastUserStroke]);
 
     networkService.sendCollabWhiteboardAction({
       actionId: crypto.randomUUID(),
       type: 'stroke_undo',
       sessionId,
-      strokeId: lastStroke.strokeId,
+      strokeId: lastUserStroke.strokeId,
       authorId: profile.userId,
       authorName: profile.username,
       timestamp: Date.now(),
     });
-  };
+  }, [strokes, profile.userId, profile.username, sessionId]);
 
-  const handleRedo = () => {
-    if (redoStack.length === 0) return;
-    const strokeToRestore = redoStack[redoStack.length - 1];
-    setRedoStack((prev) => prev.slice(0, -1));
+  const handleRedo = useCallback(() => {
+    // Only find undone strokes created by the active user
+    const userRedoStrokes = redoStack.filter((s) => s.authorId === profile.userId);
+    if (userRedoStrokes.length === 0) return;
+    const strokeToRestore = userRedoStrokes[userRedoStrokes.length - 1];
+
+    // Remove from redo stack and add back to strokes
+    setRedoStack((prev) => prev.filter((s) => s.strokeId !== strokeToRestore.strokeId));
     setStrokes((prev) => [...prev, strokeToRestore]);
 
     networkService.sendCollabWhiteboardAction({
@@ -453,7 +469,7 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
       authorName: profile.username,
       timestamp: Date.now(),
     });
-  };
+  }, [redoStack, profile.userId, profile.username, sessionId]);
 
   const handleClearCanvas = () => {
     setStrokes([]);
@@ -480,6 +496,25 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
     a.click();
   };
 
+  // Keyboard Shortcuts (Ctrl+Z / Cmd+Z for user undo, Ctrl+Y / Cmd+Shift+Z for user redo)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
+
+      const isModifier = e.ctrlKey || e.metaKey;
+      if (isModifier && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      } else if (isModifier && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleUndo, handleRedo]);
+
   return (
     <div className="w-full flex flex-col gap-3 font-sans">
       {/* ========================================================================= */}
@@ -490,11 +525,10 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
         <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-lg border border-slate-800">
           <button
             onClick={() => setSelectedTool('pen')}
-            className={`p-2 rounded-md transition flex items-center gap-1.5 text-xs font-semibold ${
-              selectedTool === 'pen'
-                ? 'bg-cyan-600 text-white shadow-[0_0_12px_rgba(6,182,212,0.4)]'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
+            className={`p-2 rounded-md transition flex items-center gap-1.5 text-xs font-semibold ${selectedTool === 'pen'
+              ? 'bg-cyan-600 text-white shadow-[0_0_12px_rgba(6,182,212,0.4)]'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
             title="Fine Pen (Crisp Vector Stroke)"
           >
             <Pen size={15} />
@@ -503,11 +537,10 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
 
           <button
             onClick={() => setSelectedTool('brush')}
-            className={`p-2 rounded-md transition flex items-center gap-1.5 text-xs font-semibold ${
-              selectedTool === 'brush'
-                ? 'bg-cyan-600 text-white shadow-[0_0_12px_rgba(6,182,212,0.4)]'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
+            className={`p-2 rounded-md transition flex items-center gap-1.5 text-xs font-semibold ${selectedTool === 'brush'
+              ? 'bg-cyan-600 text-white shadow-[0_0_12px_rgba(6,182,212,0.4)]'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
             title="Neon Glow Brush"
           >
             <Paintbrush size={15} />
@@ -516,11 +549,10 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
 
           <button
             onClick={() => setSelectedTool('highlighter')}
-            className={`p-2 rounded-md transition flex items-center gap-1.5 text-xs font-semibold ${
-              selectedTool === 'highlighter'
-                ? 'bg-cyan-600 text-white shadow-[0_0_12px_rgba(6,182,212,0.4)]'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
+            className={`p-2 rounded-md transition flex items-center gap-1.5 text-xs font-semibold ${selectedTool === 'highlighter'
+              ? 'bg-cyan-600 text-white shadow-[0_0_12px_rgba(6,182,212,0.4)]'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
             title="Semi-Transparent Highlighter"
           >
             <Highlighter size={15} />
@@ -529,11 +561,10 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
 
           <button
             onClick={() => setSelectedTool('eraser')}
-            className={`p-2 rounded-md transition flex items-center gap-1.5 text-xs font-semibold ${
-              selectedTool === 'eraser'
-                ? 'bg-rose-600 text-white shadow-[0_0_12px_rgba(244,63,94,0.4)]'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
+            className={`p-2 rounded-md transition flex items-center gap-1.5 text-xs font-semibold ${selectedTool === 'eraser'
+              ? 'bg-rose-600 text-white shadow-[0_0_12px_rgba(244,63,94,0.4)]'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
             title="Precision Eraser"
           >
             <Eraser size={15} />
@@ -541,34 +572,54 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
           </button>
         </div>
 
-        {/* Cyberpunk Neon Color Swatches */}
+        {/* Color Swatches */}
         {selectedTool !== 'eraser' && (
-          <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-lg border border-slate-800">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#0a0a14', padding: '6px 10px', border: '1px solid #1e293b', flexShrink: 0 }}>
             {NEON_PALETTE.map((color) => (
               <button
                 key={color.hex}
+                type="button"
                 onClick={() => setSelectedColor(color.hex)}
-                className={`w-6 h-6 rounded-full transition-transform border ${
-                  selectedColor === color.hex
-                    ? 'scale-125 border-white shadow-[0_0_10px_rgba(255,255,255,0.8)]'
-                    : 'border-transparent hover:scale-110 opacity-70 hover:opacity-100'
-                }`}
-                style={{ backgroundColor: color.hex }}
+                style={{
+                  width: '22px',
+                  height: '22px',
+                  borderRadius: '50%',
+                  backgroundColor: color.hex,
+                  border: selectedColor === color.hex ? '2px solid #ffffff' : '2px solid #334155',
+                  boxShadow: selectedColor === color.hex ? '0 0 0 2px rgba(255,255,255,0.3)' : 'none',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  padding: 0,
+                  transition: 'all 0.15s ease',
+                  transform: selectedColor === color.hex ? 'scale(1.15)' : 'scale(1)',
+                }}
                 title={color.name}
               />
             ))}
 
             {/* Custom Color Input */}
             <label
-              className="w-6 h-6 rounded-full border border-slate-700 hover:border-white cursor-pointer flex items-center justify-center text-slate-400 hover:text-white overflow-hidden"
+              style={{
+                width: '22px',
+                height: '22px',
+                borderRadius: '50%',
+                border: '2px solid #475569',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                position: 'relative',
+                overflow: 'hidden',
+              }}
               title="Custom Color Picker"
             >
-              <Palette size={12} />
+              <Palette size={12} style={{ color: '#94a3b8' }} />
               <input
                 type="color"
                 value={selectedColor}
                 onChange={(e) => setSelectedColor(e.target.value)}
-                className="opacity-0 w-0 h-0 absolute pointer-events-none"
+                style={{ position: 'absolute', opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
               />
             </label>
           </div>
@@ -582,11 +633,10 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
               <button
                 key={b.size}
                 onClick={() => setBrushSize(b.size)}
-                className={`px-2 py-0.5 rounded text-[11px] font-mono transition ${
-                  brushSize === b.size
-                    ? 'bg-blue-600 text-white font-bold'
-                    : 'text-slate-400 hover:bg-slate-800'
-                }`}
+                className={`px-2 py-0.5 rounded text-[11px] font-mono transition ${brushSize === b.size
+                  ? 'bg-blue-600 text-white font-bold'
+                  : 'text-slate-400 hover:bg-slate-800'
+                  }`}
               >
                 {b.size}px
               </button>
@@ -596,31 +646,41 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
 
         {/* Undo / Redo / Grid / Clear Controls */}
         <div className="flex items-center gap-1.5">
-          <button
-            onClick={handleUndo}
-            disabled={strokes.length === 0}
-            className="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
-            title="Undo Last Stroke"
-          >
-            <Undo2 size={15} />
-          </button>
+          {(() => {
+            const myStrokesCount = strokes.filter((s) => s.authorId === profile.userId).length;
+            const myRedoCount = redoStack.filter((s) => s.authorId === profile.userId).length;
 
-          <button
-            onClick={handleRedo}
-            disabled={redoStack.length === 0}
-            className="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
-            title="Redo Stroke"
-          >
-            <Redo2 size={15} />
-          </button>
+            return (
+              <>
+                <button
+                  type="button"
+                  onClick={handleUndo}
+                  disabled={myStrokesCount === 0}
+                  className="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                  title={myStrokesCount === 0 ? 'No strokes drawn by you to undo' : `Undo your last stroke (${myStrokesCount} left)`}
+                >
+                  <Undo2 size={15} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleRedo}
+                  disabled={myRedoCount === 0}
+                  className="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                  title={myRedoCount === 0 ? 'No undone strokes by you to restore' : `Redo your stroke (${myRedoCount} available)`}
+                >
+                  <Redo2 size={15} />
+                </button>
+              </>
+            );
+          })()}
 
           <button
             onClick={() => setShowGrid(!showGrid)}
-            className={`p-2 rounded-lg transition ${
-              showGrid
-                ? 'bg-cyan-950/80 text-cyan-300 border border-cyan-500/40'
-                : 'bg-slate-800 text-slate-400 hover:text-white'
-            }`}
+            className={`p-2 rounded-lg transition ${showGrid
+              ? 'bg-cyan-950/80 text-cyan-300 border border-cyan-500/40'
+              : 'bg-slate-800 text-slate-400 hover:text-white'
+              }`}
             title="Toggle Matrix Grid"
           >
             <Grid size={15} />
