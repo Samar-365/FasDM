@@ -12,6 +12,7 @@ import {
 import { networkService } from '../services/network';
 import { dbEngine } from '../services/db';
 import { SharedWhiteboard } from './collaboration/SharedWhiteboard';
+import { SharedChecklist } from './collaboration/SharedChecklist';
 import {
   PenTool,
   CheckSquare,
@@ -489,22 +490,14 @@ export const CollaborationHub: React.FC<CollaborationHubProps> = ({
           />
         )}
 
-        {/* Checklist Workspace Placeholder / Component */}
+        {/* Checklist Workspace Component */}
         {activeTab === 'checklist' && (
-          <div className="w-full h-full flex flex-col items-center justify-center min-h-[540px] text-center p-6 border-2 border-dashed border-emerald-500/20 rounded-xl bg-emerald-950/10">
-            <div className="w-16 h-16 rounded-2xl bg-emerald-900/40 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.3)] mb-4">
-              <CheckSquare size={32} className="animate-bounce" />
-            </div>
-            <h3 className="text-lg font-bold text-white tracking-wide">Interactive Multi-User Checklist</h3>
-            <p className="text-slate-400 text-xs max-w-md mt-1.5 mb-6">
-              Collaborative task lists with optimistic real-time checkbox status toggles, priority tags (Urgent, High, Medium, Low), assignee filters, and animated completion progress meters.
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-2 font-mono text-[11px] text-emerald-300">
-              <span className="px-2.5 py-1 rounded-lg bg-emerald-950/80 border border-emerald-500/30">Submodule 10.4 Engine</span>
-              <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-slate-300">COLLAB_CHECKLIST_ACTION</span>
-              <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-slate-300">Optimistic UI</span>
-            </div>
-          </div>
+          <SharedChecklist
+            profile={profile}
+            sessionId={selectedSessionId}
+            sessionType={sessionType}
+            onChecklistCountChange={setChecklistCount}
+          />
         )}
 
         {/* Sticky Notes Workspace Placeholder / Component */}
