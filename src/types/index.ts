@@ -7,7 +7,7 @@ export interface UserProfile {
 }
 
 export type AppView = 'splash' | 'setup' | 'dashboard';
-export type DashboardTab = 'overview' | 'peers' | 'chat' | 'groups';
+export type DashboardTab = 'overview' | 'peers' | 'chat' | 'groups' | 'collab';
 
 export type TransportChannel = 'LAN' | 'Wi-Fi Direct' | 'Bluetooth';
 export type MessageStatus = 'sent' | 'delivered' | 'read';
