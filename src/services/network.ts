@@ -9,6 +9,12 @@ import {
   MessageStatus,
   SharedFile,
   VoiceNote,
+  WhiteboardAction,
+  ChecklistAction,
+  StickyNoteAction,
+  CollabPresence,
+  CollabStateRequestPayload,
+  CollabStateResponsePayload,
 } from '../types';
 import { dbEngine } from './db';
 
@@ -21,6 +27,12 @@ type AckListener = (messageId: string, status: MessageStatus) => void;
 type GroupListener = (groups: GroupChat[]) => void;
 type GroupMessageListener = (groupId: string, message: GroupMessage) => void;
 type FileListener = (file: SharedFile) => void;
+type CollabWhiteboardListener = (action: WhiteboardAction) => void;
+type CollabChecklistListener = (action: ChecklistAction) => void;
+type CollabStickyListener = (action: StickyNoteAction) => void;
+type CollabPresenceListener = (presence: CollabPresence) => void;
+type CollabStateRequestListener = (payload: CollabStateRequestPayload) => void;
+type CollabStateResponseListener = (payload: CollabStateResponsePayload) => void;
 
 export class P2PNetworkService {
   private broadcastChannel: BroadcastChannel | null = null;
@@ -37,6 +49,12 @@ export class P2PNetworkService {
   private groupListeners: Set<GroupListener> = new Set();
   private groupMessageListeners: Set<GroupMessageListener> = new Set();
   private fileListeners: Set<FileListener> = new Set();
+  private collabWhiteboardListeners: Set<CollabWhiteboardListener> = new Set();
+  private collabChecklistListeners: Set<CollabChecklistListener> = new Set();
+  private collabStickyListeners: Set<CollabStickyListener> = new Set();
+  private collabPresenceListeners: Set<CollabPresenceListener> = new Set();
+  private collabStateRequestListeners: Set<CollabStateRequestListener> = new Set();
+  private collabStateResponseListeners: Set<CollabStateResponseListener> = new Set();
 
   constructor() {
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
@@ -154,6 +172,36 @@ export class P2PNetworkService {
   subscribeFiles(listener: FileListener) {
     this.fileListeners.add(listener);
     return () => this.fileListeners.delete(listener);
+  }
+
+  subscribeCollabWhiteboard(listener: CollabWhiteboardListener) {
+    this.collabWhiteboardListeners.add(listener);
+    return () => this.collabWhiteboardListeners.delete(listener);
+  }
+
+  subscribeCollabChecklist(listener: CollabChecklistListener) {
+    this.collabChecklistListeners.add(listener);
+    return () => this.collabChecklistListeners.delete(listener);
+  }
+
+  subscribeCollabSticky(listener: CollabStickyListener) {
+    this.collabStickyListeners.add(listener);
+    return () => this.collabStickyListeners.delete(listener);
+  }
+
+  subscribeCollabPresence(listener: CollabPresenceListener) {
+    this.collabPresenceListeners.add(listener);
+    return () => this.collabPresenceListeners.delete(listener);
+  }
+
+  subscribeCollabStateRequest(listener: CollabStateRequestListener) {
+    this.collabStateRequestListeners.add(listener);
+    return () => this.collabStateRequestListeners.delete(listener);
+  }
+
+  subscribeCollabStateResponse(listener: CollabStateResponseListener) {
+    this.collabStateResponseListeners.add(listener);
+    return () => this.collabStateResponseListeners.delete(listener);
   }
 
   private notifyPeerListeners() {
@@ -321,6 +369,42 @@ export class P2PNetworkService {
         if (packet.recipientId === this.currentUser.userId) {
           const { voiceId } = packet.payload;
           console.log(`[P2P Network] Voice note ACK received for ${voiceId}`);
+        }
+        break;
+
+      case 'COLLAB_WHITEBOARD_ACTION':
+        if (packet.payload?.action) {
+          this.collabWhiteboardListeners.forEach((fn) => fn(packet.payload.action));
+        }
+        break;
+
+      case 'COLLAB_CHECKLIST_ACTION':
+        if (packet.payload?.action) {
+          this.collabChecklistListeners.forEach((fn) => fn(packet.payload.action));
+        }
+        break;
+
+      case 'COLLAB_STICKY_ACTION':
+        if (packet.payload?.action) {
+          this.collabStickyListeners.forEach((fn) => fn(packet.payload.action));
+        }
+        break;
+
+      case 'COLLAB_PRESENCE_HEARTBEAT':
+        if (packet.payload?.presence) {
+          this.collabPresenceListeners.forEach((fn) => fn(packet.payload.presence));
+        }
+        break;
+
+      case 'COLLAB_ROOM_STATE_REQUEST':
+        if (packet.payload?.request) {
+          this.collabStateRequestListeners.forEach((fn) => fn(packet.payload.request));
+        }
+        break;
+
+      case 'COLLAB_ROOM_STATE_RESPONSE':
+        if (packet.payload?.response) {
+          this.collabStateResponseListeners.forEach((fn) => fn(packet.payload.response));
         }
         break;
 
@@ -1145,6 +1229,119 @@ export class P2PNetworkService {
       await dbEngine.saveGroupMessage(gMsg);
       this.groupMessageListeners.forEach((fn) => fn(packet.payload.groupId, gMsg));
     }
+  }
+
+  /**
+   * ==========================================
+   * MODULE 10: COLLABORATION PACKET BROADCASTERS
+   * ==========================================
+   */
+  sendCollabWhiteboardAction(action: WhiteboardAction, recipientId?: string) {
+    if (!this.currentUser || !this.broadcastChannel) return;
+    const packet: NetworkPacket = {
+      id: crypto.randomUUID(),
+      type: 'COLLAB_WHITEBOARD_ACTION',
+      sender: {
+        userId: this.currentUser.userId,
+        username: this.currentUser.username,
+        avatar: this.currentUser.avatar,
+        connectionType: this.activeChannel,
+      },
+      recipientId,
+      payload: { action },
+      timestamp: Date.now(),
+    };
+    this.broadcastChannel.postMessage(packet);
+  }
+
+  sendCollabChecklistAction(action: ChecklistAction, recipientId?: string) {
+    if (!this.currentUser || !this.broadcastChannel) return;
+    const packet: NetworkPacket = {
+      id: crypto.randomUUID(),
+      type: 'COLLAB_CHECKLIST_ACTION',
+      sender: {
+        userId: this.currentUser.userId,
+        username: this.currentUser.username,
+        avatar: this.currentUser.avatar,
+        connectionType: this.activeChannel,
+      },
+      recipientId,
+      payload: { action },
+      timestamp: Date.now(),
+    };
+    this.broadcastChannel.postMessage(packet);
+  }
+
+  sendCollabStickyAction(action: StickyNoteAction, recipientId?: string) {
+    if (!this.currentUser || !this.broadcastChannel) return;
+    const packet: NetworkPacket = {
+      id: crypto.randomUUID(),
+      type: 'COLLAB_STICKY_ACTION',
+      sender: {
+        userId: this.currentUser.userId,
+        username: this.currentUser.username,
+        avatar: this.currentUser.avatar,
+        connectionType: this.activeChannel,
+      },
+      recipientId,
+      payload: { action },
+      timestamp: Date.now(),
+    };
+    this.broadcastChannel.postMessage(packet);
+  }
+
+  sendCollabPresence(presence: CollabPresence, recipientId?: string) {
+    if (!this.currentUser || !this.broadcastChannel) return;
+    const packet: NetworkPacket = {
+      id: crypto.randomUUID(),
+      type: 'COLLAB_PRESENCE_HEARTBEAT',
+      sender: {
+        userId: this.currentUser.userId,
+        username: this.currentUser.username,
+        avatar: this.currentUser.avatar,
+        connectionType: this.activeChannel,
+      },
+      recipientId,
+      payload: { presence },
+      timestamp: Date.now(),
+    };
+    this.broadcastChannel.postMessage(packet);
+  }
+
+  sendCollabStateRequest(request: CollabStateRequestPayload, recipientId?: string) {
+    if (!this.currentUser || !this.broadcastChannel) return;
+    const packet: NetworkPacket = {
+      id: crypto.randomUUID(),
+      type: 'COLLAB_ROOM_STATE_REQUEST',
+      sender: {
+        userId: this.currentUser.userId,
+        username: this.currentUser.username,
+        avatar: this.currentUser.avatar,
+        connectionType: this.activeChannel,
+      },
+      recipientId,
+      payload: { request },
+      timestamp: Date.now(),
+    };
+    this.broadcastChannel.postMessage(packet);
+  }
+
+  sendCollabStateResponse(response: CollabStateResponsePayload, recipientId: string) {
+    if (!this.currentUser || !this.broadcastChannel) return;
+    const packet: NetworkPacket = {
+      id: crypto.randomUUID(),
+      type: 'COLLAB_ROOM_STATE_RESPONSE',
+      sender: {
+        userId: this.currentUser.userId,
+        username: this.currentUser.username,
+        avatar: this.currentUser.avatar,
+        connectionType: this.activeChannel,
+      },
+      recipientId,
+      payload: { response },
+      timestamp: Date.now(),
+    };
+    this.broadcastChannel.postMessage(packet);
   }
 }
 

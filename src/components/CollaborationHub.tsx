@@ -11,6 +11,7 @@ import {
 } from '../types';
 import { networkService } from '../services/network';
 import { dbEngine } from '../services/db';
+import { SharedWhiteboard } from './collaboration/SharedWhiteboard';
 import {
   PenTool,
   CheckSquare,
@@ -478,22 +479,14 @@ export const CollaborationHub: React.FC<CollaborationHubProps> = ({
       {/* 3. COLLABORATION WORKSPACE CONTENT AREA */}
       {/* ========================================================================= */}
       <div className="w-full min-h-[600px] rounded-2xl border border-slate-800 bg-slate-950/60 backdrop-blur-lg p-3 sm:p-5 relative overflow-hidden">
-        {/* Whiteboard Workspace Placeholder / Component */}
+        {/* Whiteboard Workspace Component */}
         {activeTab === 'whiteboard' && (
-          <div className="w-full h-full flex flex-col items-center justify-center min-h-[540px] text-center p-6 border-2 border-dashed border-cyan-500/20 rounded-xl bg-cyan-950/10">
-            <div className="w-16 h-16 rounded-2xl bg-cyan-900/40 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.3)] mb-4">
-              <PenTool size={32} className="animate-bounce" />
-            </div>
-            <h3 className="text-lg font-bold text-white tracking-wide">Shared Whiteboard Engine</h3>
-            <p className="text-slate-400 text-xs max-w-md mt-1.5 mb-6">
-              Synchronized HTML5 2D Canvas with resolution-independent coordinate normalization, cyberpunk color palettes, smoothing interpolation, and vector stroke streaming over P2P mesh packets.
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-2 font-mono text-[11px] text-cyan-300">
-              <span className="px-2.5 py-1 rounded-lg bg-cyan-950/80 border border-cyan-500/30">Submodule 10.3 Engine</span>
-              <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-slate-300">COLLAB_WHITEBOARD_ACTION</span>
-              <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-slate-300">60 FPS Throttle</span>
-            </div>
-          </div>
+          <SharedWhiteboard
+            profile={profile}
+            sessionId={selectedSessionId}
+            sessionType={sessionType}
+            onStrokesCountChange={setStrokesCount}
+          />
         )}
 
         {/* Checklist Workspace Placeholder / Component */}
