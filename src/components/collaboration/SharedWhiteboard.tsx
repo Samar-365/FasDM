@@ -87,19 +87,33 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
     onStrokesCountChangeRef.current = onStrokesCountChange;
   }, [onStrokesCountChange]);
 
+  const isLoadedForSessionRef = useRef<string | null>(null);
+
   // Load saved strokes from IndexedDB on sessionId change
   useEffect(() => {
     let isMounted = true;
+    isLoadedForSessionRef.current = null;
+
     dbEngine.getWhiteboardStrokes(sessionId).then((saved) => {
-      if (isMounted && saved && saved.length > 0) {
-        setStrokes(saved);
+      if (isMounted) {
+        if (saved && saved.length > 0) {
+          setStrokes(saved);
+        } else {
+          setStrokes([]);
+        }
+        isLoadedForSessionRef.current = sessionId;
       }
-    }).catch(console.warn);
+    }).catch((err) => {
+      console.warn('Failed to load whiteboard strokes from IndexedDB:', err);
+      if (isMounted) isLoadedForSessionRef.current = sessionId;
+    });
+
     return () => { isMounted = false; };
   }, [sessionId]);
 
-  // Persist strokes to IndexedDB when modified
+  // Persist strokes to IndexedDB when modified (only after initial load has finished)
   useEffect(() => {
+    if (isLoadedForSessionRef.current !== sessionId) return;
     dbEngine.saveWhiteboardStrokes(sessionId, strokes).catch(console.warn);
     onStrokesCountChangeRef.current?.(strokes.length);
   }, [strokes, sessionId]);

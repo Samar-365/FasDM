@@ -422,14 +422,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
         )}
 
         {/* TAB 5: COLLABORATION WORKSPACE HUB */}
-        {activeTab === 'collab' && (
+        <div style={{ display: activeTab === 'collab' ? 'block' : 'none' }}>
           <CollaborationHub
             profile={profile}
             initialSessionId={selectedPeerForChat?.deviceId}
             initialSessionType={selectedPeerForChat ? 'peer' : 'scratch'}
             onOpenChatWithPeer={handleSelectPeerForChat}
           />
-        )}
+        </div>
 
       </div>
 
