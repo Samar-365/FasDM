@@ -118,55 +118,80 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
     onStrokesCountChangeRef.current?.(strokes.length);
   }, [strokes, sessionId]);
 
-  // Redraw Canvas when strokes or grid changes
-  const redrawCanvas = useCallback(() => {
+  // Draw Grid Matrix
+  const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.14)';
+    ctx.lineWidth = 1;
+    const gridSize = 32;
+
+    for (let x = 0; x < width; x += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+      ctx.stroke();
+    }
+
+    for (let y = 0; y < height; y += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
+
+    // Neon dot matrix intersections
+    ctx.fillStyle = 'rgba(6, 182, 212, 0.35)';
+    for (let x = gridSize; x < width; x += gridSize * 2) {
+      for (let y = gridSize; y < height; y += gridSize * 2) {
+        ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
+      }
+    }
+    ctx.restore();
+  };
+
+  // Redraw Canvas when strokes, grid, or extra in-progress stroke changes
+  const redrawCanvas = useCallback((extraStroke?: DrawingStroke) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const width = canvas.width;
-    const height = canvas.height;
+    const dpr = window.devicePixelRatio || 1;
+    const width = canvas.width / dpr;
+    const height = canvas.height / dpr;
 
-    // Clear whole canvas
-    ctx.clearRect(0, 0, width, height);
+    if (width <= 0 || height <= 0) return;
+
+    ctx.save();
+    // Reset transform to identity and clear entire physical pixel buffer
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Scale context by DPR so all drawing coordinates match CSS pixels (0..width, 0..height)
+    ctx.scale(dpr, dpr);
 
     // Draw Cyberpunk Grid
     if (showGrid) {
-      ctx.save();
-      ctx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
-      ctx.lineWidth = 1;
-      const gridSize = 32;
-
-      for (let x = 0; x < width; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
-        ctx.stroke();
-      }
-
-      for (let y = 0; y < height; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-        ctx.stroke();
-      }
-
-      // Draw subtle dot matrix intersections
-      ctx.fillStyle = 'rgba(6, 182, 212, 0.15)';
-      for (let x = gridSize; x < width; x += gridSize * 2) {
-        for (let y = gridSize; y < height; y += gridSize * 2) {
-          ctx.fillRect(x - 1, y - 1, 2, 2);
-        }
-      }
-      ctx.restore();
+      drawGrid(ctx, width, height);
     }
 
     // Render all saved strokes
     strokes.forEach((stroke) => {
       renderStroke(ctx, stroke, width, height);
     });
+
+    // Render active in-progress preview stroke if provided
+    if (extraStroke) {
+      renderStroke(ctx, extraStroke, width, height);
+    }
+
+    ctx.restore();
   }, [strokes, showGrid]);
+
+  // Redraw whenever strokes or showGrid change
+  useEffect(() => {
+    redrawCanvas();
+  }, [redrawCanvas]);
 
   // Render a single stroke with Bezier Curve Smoothing
   const renderStroke = (
@@ -234,32 +259,58 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
     ctx.restore();
   };
 
-  // Resize canvas according to container dimensions
+  // Resize canvas according to container dimensions and observe visibility changes
   useEffect(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
+
     const handleResize = () => {
-      const canvas = canvasRef.current;
-      const container = containerRef.current;
-      if (!canvas || !container) return;
-
       const rect = container.getBoundingClientRect();
+      const cssWidth = Math.floor(rect.width);
+      const cssHeight = Math.floor(rect.height);
+      if (cssWidth === 0 || cssHeight === 0) return;
+
       const dpr = window.devicePixelRatio || 1;
+      const targetWidth = Math.floor(cssWidth * dpr);
+      const targetHeight = Math.floor(cssHeight * dpr);
 
-      // Set actual pixel buffer
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
-
-      // Scale context for DPR
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.scale(dpr, dpr);
+      if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        redrawCanvas();
       }
-
-      redrawCanvas();
     };
 
     handleResize();
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver((entries) => {
+        if (!entries || entries.length === 0) return;
+        const entry = entries[0];
+        const width = Math.floor(entry.contentRect.width);
+        const height = Math.floor(entry.contentRect.height);
+        if (width === 0 || height === 0) return;
+
+        const dpr = window.devicePixelRatio || 1;
+        const targetWidth = Math.floor(width * dpr);
+        const targetHeight = Math.floor(height * dpr);
+
+        if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+          canvas.width = targetWidth;
+          canvas.height = targetHeight;
+          redrawCanvas();
+        }
+      });
+      resizeObserver.observe(container);
+    }
+
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      if (resizeObserver) resizeObserver.disconnect();
+      window.removeEventListener('resize', handleResize);
+    };
   }, [redrawCanvas]);
 
   // Subscribe to P2P Mesh Collaboration Packets
@@ -379,12 +430,6 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
 
     currentPointsRef.current.push(pt);
 
-    // Live preview on local canvas
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
     const tempStroke: DrawingStroke = {
       strokeId: currentStrokeIdRef.current || 'temp',
       sessionId,
@@ -397,8 +442,7 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
       timestamp: Date.now(),
     };
 
-    redrawCanvas();
-    renderStroke(ctx, tempStroke, canvas.width, canvas.height);
+    redrawCanvas(tempStroke);
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -421,6 +465,9 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
       points: [...currentPointsRef.current],
       timestamp: Date.now(),
     };
+
+    // Immediately flush/render with the completed new stroke
+    redrawCanvas(newStroke);
 
     // Save to local strokes state
     setStrokes((prev) => [...prev, newStroke]);
@@ -723,7 +770,8 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
       {/* ========================================================================= */}
       <div
         ref={containerRef}
-        className="w-full h-[560px] sm:h-[620px] bg-slate-950 rounded-2xl border border-slate-800 relative overflow-hidden shadow-2xl touch-none select-none cursor-crosshair"
+        style={{ height: '600px', minHeight: '480px' }}
+        className="w-full bg-slate-950 rounded-2xl border border-slate-800 relative overflow-hidden shadow-2xl touch-none select-none cursor-crosshair"
       >
         <canvas
           id="fasdm-whiteboard-canvas"
@@ -732,7 +780,8 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
-          className="w-full h-full block"
+          style={{ width: '100%', height: '100%', display: 'block', touchAction: 'none' }}
+          className="absolute inset-0 w-full h-full block touch-none"
         />
 
         {/* Remote Live Cursor Pointers Overlay */}
