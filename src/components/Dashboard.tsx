@@ -12,6 +12,7 @@ import {
   Shield,
   QrCode,
   Radio,
+  Wifi,
   Users,
   MessageSquare,
   LayoutDashboard,
@@ -218,13 +219,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
               <Layers size={14} /> Collab Hub
             </button>
           </div>
-
-          <div className="flex items-center gap-2">
-            <span className="badge badge-emerald text-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse mr-1 inline-block" />
-              Local P2P Active
-            </span>
-          </div>
         </div>
 
         {/* TAB 1: SYSTEM OVERVIEW */}
@@ -268,6 +262,49 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, onEditProfile }) 
                     Edit Profile
                   </button>
                 </div>
+              </div>
+            </div>
+
+            {/* System Features Card */}
+            <div className="glass-panel p-5 space-y-3.5 border border-emerald-500/20 bg-slate-950/70 rounded-2xl">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">System Features</span>
+                <span className="text-[11px] font-mono text-emerald-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block" />
+                  All Core Protocols Online
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className="badge badge-emerald py-1.5 px-3 text-xs flex items-center gap-1.5 font-bold">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block" />
+                  Internet-Free Active
+                </span>
+
+                <span className="badge badge-cyan py-1.5 px-3 text-xs flex items-center gap-1.5 font-bold">
+                  <Wifi size={13} />
+                  P2P Network
+                </span>
+
+                <span className="badge badge-purple py-1.5 px-3 text-xs flex items-center gap-1.5 font-bold">
+                  <Shield size={13} />
+                  End-to-End Encrypted
+                </span>
+
+                <span className="badge badge-cyan py-1.5 px-3 text-xs flex items-center gap-1.5 font-bold">
+                  <FileText size={13} />
+                  Wi-Fi Direct File Sharing
+                </span>
+
+                <span className="badge badge-emerald py-1.5 px-3 text-xs flex items-center gap-1.5 font-bold">
+                  <Layers size={13} />
+                  Real-Time Mesh Collaboration
+                </span>
+
+                <span className="badge badge-purple py-1.5 px-3 text-xs flex items-center gap-1.5 font-bold">
+                  <QrCode size={13} />
+                  Peer QR Pairing
+                </span>
               </div>
             </div>
 

@@ -28,16 +28,6 @@ export const Navbar: React.FC<NavbarProps> = ({ profile, onEditProfile, onNewTab
               </span>
             </div>
           </div>
-
-          <div className="hidden sm:flex items-center gap-2">
-            <span className="badge badge-emerald">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-              Internet-Free Active
-            </span>
-            <span className="badge badge-cyan">
-              <Wifi size={12} className="inline mr-1" /> P2P Network
-            </span>
-          </div>
         </div>
 
         {/* Right: Active Profile Badge & Actions */}
